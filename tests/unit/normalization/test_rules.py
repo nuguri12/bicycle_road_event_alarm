@@ -1,0 +1,34 @@
+from datetime import UTC, datetime
+
+from bicycle_road_event_alarm.normalization.classifier import classify_event
+from bicycle_road_event_alarm.normalization.datetime import parse_event_datetime
+from bicycle_road_event_alarm.normalization.location import extract_location
+from bicycle_road_event_alarm.normalization.title import normalize_title
+
+
+def test_normalize_title_collapses_whitespace() -> None:
+    assert normalize_title("  2026  한강   교통통제 안내  ", None) == "2026 한강 교통통제 안내"
+
+
+def test_parse_event_datetime_extracts_korean_numeric_range() -> None:
+    fetched_at = datetime(2026, 6, 30, tzinfo=UTC)
+
+    result = parse_event_datetime("2026.07.04 08:00 ~ 12:00", None, None, fetched_at)
+
+    assert result.start == datetime(2026, 7, 4, 8, 0, tzinfo=UTC)
+    assert result.end == datetime(2026, 7, 4, 12, 0, tzinfo=UTC)
+
+
+def test_extract_location_prefers_raw_location_text() -> None:
+    result = extract_location("잠실대교 남단 ~ 뚝섬한강공원", None, None)
+
+    assert result.location_name == "잠실대교 남단 ~ 뚝섬한강공원"
+    assert result.region == "서울"
+
+
+def test_classify_event_detects_road_closure_high_impact() -> None:
+    result = classify_event("한강 교통통제 안내", "자전거도로 교통통제 예정")
+
+    assert result.event_type == "road_closure"
+    assert result.cyclist_impact_level == "high"
+    assert result.publish_candidate_impact is True
