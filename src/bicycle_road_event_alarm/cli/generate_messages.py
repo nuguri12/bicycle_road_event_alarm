@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from typing import cast
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from bicycle_road_event_alarm.config.settings import load_settings
+from bicycle_road_event_alarm.db.engine import create_engine_from_settings, create_session_factory
+from bicycle_road_event_alarm.messaging.openai_generator import OpenAIClient, OpenAIMessageGenerator
+from bicycle_road_event_alarm.messaging.repository import load_publishable_message_events
+from bicycle_road_event_alarm.messaging.service import generate_alert_message
+
+DEFAULT_OPENAI_MODEL = "gpt-5.2"
+
+
+# 실행 명령: publishable normalized_events를 읽어 알림 메시지를 생성합니다.
+def main() -> int:
+    load_dotenv(".env")
+    settings = load_settings()
+    engine = create_engine_from_settings(settings)
+    session_factory = create_session_factory(engine)
+
+    with session_factory() as session:
+        events = load_publishable_message_events(session)
+
+    generator = None
+    if events and settings.openai_api_key is not None:
+        generator = OpenAIMessageGenerator(
+            client=cast(OpenAIClient, OpenAI(api_key=settings.openai_api_key)),
+            model=DEFAULT_OPENAI_MODEL,
+        )
+
+    result = generate_alert_message(events, openai_generator=generator)
+    print(f"MESSAGE_STATUS={result.status}")
+    print(f"MESSAGE_SOURCE={result.source}")
+    print(f"MESSAGE_EVENT_COUNT={result.event_count}")
+    if result.text:
+        print(result.text)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
