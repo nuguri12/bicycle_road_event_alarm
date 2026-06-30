@@ -7,7 +7,43 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from bicycle_road_event_alarm.crawler.raw_event import RawEventCandidate
-from bicycle_road_event_alarm.db.models import RawEvent
+from bicycle_road_event_alarm.db.models import RawEvent, RunLog
+
+
+# 실행 로그 시작: 수집 배치 1회를 running 상태로 기록합니다.
+def start_run_log(session: Session) -> RunLog:
+    now = datetime.now(UTC)
+    run_log = RunLog(
+        id=uuid.uuid4(),
+        status="running",
+        started_at=now,
+        finished_at=None,
+        raw_event_count=0,
+        normalized_event_count=0,
+        published_message_count=0,
+        error_summary=None,
+        created_at=now,
+    )
+    session.add(run_log)
+    return run_log
+
+
+# 실행 로그 종료: 저장 결과 count와 종료 상태를 run_logs에 반영합니다.
+def finish_run_log(
+    run_log: RunLog,
+    *,
+    raw_event_count: int,
+    normalized_event_count: int,
+    published_message_count: int,
+    status: str = "success",
+    error_summary: str | None = None,
+) -> None:
+    run_log.status = status
+    run_log.finished_at = datetime.now(UTC)
+    run_log.raw_event_count = raw_event_count
+    run_log.normalized_event_count = normalized_event_count
+    run_log.published_message_count = published_message_count
+    run_log.error_summary = error_summary
 
 
 # 모델 변환: 원문 후보를 raw_events 테이블에 저장 가능한 ORM 객체로 바꿉니다.
