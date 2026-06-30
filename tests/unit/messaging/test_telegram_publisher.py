@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
+import requests
 
 from bicycle_road_event_alarm.messaging.telegram_publisher import (
     RequestsTelegramClient,
@@ -99,6 +100,31 @@ def test_publish_telegram_message_fails_without_call_when_config_missing() -> No
     assert result.status == "failed"
     assert result.reason == "telegram_config_missing"
     assert client.calls == []
+
+
+def test_publish_telegram_message_returns_failed_when_client_raises() -> None:
+    class FailingTelegramClient:
+        def send_message(self, *, bot_token: str, channel_id: str, text: str) -> str:
+            raise requests.HTTPError(
+                "400 Client Error for url: https://api.telegram.org/botsecret-token/sendMessage"
+            )
+
+    config = TelegramPublishConfig(
+        enabled=True,
+        dry_run=False,
+        bot_token="secret-token",
+        channel_id="@cycling_alerts",
+    )
+
+    result = publish_telegram_message(
+        "주의 구간 안내",
+        config=config,
+        client=FailingTelegramClient(),
+    )
+
+    assert result.status == "failed"
+    assert result.reason == "telegram_send_failed"
+    assert result.telegram_message_id is None
 
 
 def test_requests_telegram_client_posts_send_message_payload(

@@ -77,11 +77,19 @@ def publish_telegram_message(
             telegram_message_id=None,
         )
 
-    telegram_message_id = client.send_message(
-        bot_token=config.bot_token,
-        channel_id=config.channel_id,
-        text=normalized_message,
-    )
+    try:
+        telegram_message_id = client.send_message(
+            bot_token=config.bot_token,
+            channel_id=config.channel_id,
+            text=normalized_message,
+        )
+    except Exception:
+        return TelegramPublishResult(
+            status="failed",
+            reason="telegram_send_failed",
+            telegram_message_id=None,
+        )
+
     return TelegramPublishResult(
         status="success",
         reason=None,

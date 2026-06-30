@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from typing import cast
 
 from dotenv import load_dotenv
@@ -20,8 +21,19 @@ from bicycle_road_event_alarm.messaging.telegram_publisher import (
 DEFAULT_OPENAI_MODEL = "gpt-5.2"
 
 
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--force-fallback",
+        action="store_true",
+        help="OpenAI 호출 없이 fallback 메시지 생성기를 사용합니다.",
+    )
+    return parser.parse_args(argv)
+
+
 # 실행 명령: publishable normalized_events를 읽어 알림 메시지를 생성합니다.
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     load_dotenv(".env")
     settings = load_settings()
     engine = create_engine_from_settings(settings)
@@ -32,7 +44,7 @@ def main() -> int:
         events = load_publishable_message_events(session)
 
         generator = None
-        if events and settings.openai_api_key is not None:
+        if not args.force_fallback and events and settings.openai_api_key is not None:
             generator = OpenAIMessageGenerator(
                 client=cast(OpenAIClient, OpenAI(api_key=settings.openai_api_key)),
                 model=DEFAULT_OPENAI_MODEL,

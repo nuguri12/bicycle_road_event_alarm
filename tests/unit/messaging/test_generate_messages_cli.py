@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -120,7 +121,7 @@ def test_generate_messages_cli_prints_telegram_publish_result(
     )
     monkeypatch.setattr(generate_messages, "publish_message_once", fake_publish)
 
-    assert generate_messages.main() == 0
+    assert generate_messages.main([]) == 0
 
     captured = capsys.readouterr()
     assert "TELEGRAM_STATUS=skipped" in captured.out
@@ -134,3 +135,57 @@ def test_generate_messages_cli_prints_telegram_publish_result(
         )
     ]
     assert session_factory.committed is True
+
+
+def test_generate_messages_cli_force_fallback_does_not_create_openai_generator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = AppSettings(
+        app_env="local",
+        log_level="INFO",
+        enable_telegram_publish=False,
+        dry_run=True,
+        alert_lookahead_days=14,
+        max_events_per_message=5,
+        request_timeout_seconds=15,
+        crawler_max_retries=2,
+        supabase_url=None,
+        supabase_anon_key=None,
+        supabase_database_url="postgresql://example",
+        telegram_bot_token=None,
+        telegram_channel_id=None,
+        openai_api_key="openai-key",
+    )
+    session_factory = FakeSessionFactory()
+    run_log = SimpleNamespace(id=uuid.uuid4())
+
+    monkeypatch.setattr(generate_messages, "load_dotenv", lambda _path: None)
+    monkeypatch.setattr(generate_messages, "load_settings", lambda: settings)
+    monkeypatch.setattr(
+        generate_messages,
+        "create_engine_from_settings",
+        lambda _settings: object(),
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "create_session_factory",
+        lambda _engine: session_factory,
+    )
+    monkeypatch.setattr(generate_messages, "load_publishable_message_events", lambda _session: [])
+    monkeypatch.setattr(generate_messages, "start_run_log", lambda _session: run_log)
+    monkeypatch.setattr(generate_messages, "finish_run_log", lambda _run_log, **_kwargs: None)
+    openai_generator = Mock()
+    monkeypatch.setattr(generate_messages, "OpenAIMessageGenerator", openai_generator)
+    monkeypatch.setattr(
+        generate_messages,
+        "publish_message_once",
+        lambda _session, **_kwargs: FakePublishResult(
+            status="skipped",
+            reason="empty_message",
+            telegram_message_id=None,
+        ),
+    )
+
+    assert generate_messages.main(["--force-fallback"]) == 0
+
+    openai_generator.assert_not_called()

@@ -240,7 +240,7 @@ Interpretation:
 - Message generation flow works.
 - Current DB had no publishable events, so OpenAI was not called in the live run.
 
-### 7. Telegram Publisher
+### 7. Telegram Publisher And Fixture Verification
 
 Commit: `2b718a9 feat: add telegram publisher`
 
@@ -253,7 +253,11 @@ Implemented:
   - safe publish guard for disabled publishing, dry-run, empty message, and missing config
 - CLI integration:
   - `generate_messages` now generates a message and passes it to Telegram publisher
+  - `generate_messages --force-fallback` skips OpenAI and forces deterministic fallback
   - CLI prints `TELEGRAM_STATUS`, optional `TELEGRAM_REASON`, and optional `TELEGRAM_MESSAGE_ID`
+- Fixture support:
+  - `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture`
+  - inserts one random local-fixture `run_logs`, `raw_events`, and publishable `normalized_events` set
 - Unit tests:
   - disabled publish does not call Telegram
   - dry-run does not call Telegram
@@ -279,6 +283,24 @@ Interpretation:
 - Telegram publisher is wired into the CLI.
 - No real Telegram API call was made because the generated message was empty.
 - Real Telegram publishing is still gated by `ENABLE_TELEGRAM_PUBLISH=true` and `DRY_RUN=false`.
+
+Additional live verification after fixture support:
+
+- `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture` succeeded
+- `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` succeeded
+  - `MESSAGE_STATUS=generated`
+  - `MESSAGE_SOURCE=fallback`
+  - `MESSAGE_EVENT_COUNT=1`
+  - `TELEGRAM_STATUS=skipped`
+  - `TELEGRAM_REASON=telegram_publish_disabled`
+- OpenAI API path was attempted with the seeded event
+  - API returned `insufficient_quota`
+  - Runtime correctly fell back to deterministic fallback
+- Telegram real-send path was attempted with one fallback message
+  - sanitized runtime output: `TELEGRAM_STATUS=failed`, `TELEGRAM_REASON=telegram_send_failed`
+  - direct sanitized diagnostic returned `Bad Request: chat not found`
+  - likely causes: wrong `TELEGRAM_CHANNEL_ID`, bot not added to the channel, or bot missing channel admin/post permission
+  - One earlier traceback exposed the bot token in a Telegram API URL; rotate the Telegram bot token in BotFather before any public sharing of logs.
 
 ## Current Commands
 
@@ -316,6 +338,18 @@ Generate alert message and run Telegram publish step:
 python -m bicycle_road_event_alarm.cli.generate_messages
 ```
 
+Force fallback without OpenAI:
+
+```bash
+python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback
+```
+
+Seed one random publishable fixture event:
+
+```bash
+python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
+```
+
 Apply DB migrations:
 
 ```bash
@@ -326,12 +360,13 @@ python -m alembic upgrade head
 
 Latest verified baseline before this handoff doc:
 
-- `python -m pytest -q` passed with `45 passed`
+- `python -m pytest -q` passed with `57 passed`
 - `python -m ruff check .` passed
 - `python -m mypy src tests` passed
 - `python -m black --check .` passed
 - `python -m compileall src` passed
-- `python -m bicycle_road_event_alarm.cli.generate_messages` ran successfully against current `.env`/Supabase data
+- `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture` ran successfully against current `.env`/Supabase data
+- `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` ran successfully against current `.env`/Supabase data
 
 ## Important Implementation Notes
 
@@ -342,31 +377,27 @@ Latest verified baseline before this handoff doc:
 - Current SPATIC parser is intentionally simple and fixture-driven.
 - If SPATIC HTML changes, update fixture first, then parser.
 - Current normalization is deterministic/rule-based only.
-- OpenAI wrapper is implemented, but the live API call has not been exercised because current DB has no publishable events.
-- Telegram publisher is implemented and connected to CLI, but real publishing has not been exercised.
+- OpenAI wrapper is implemented and the live API call was attempted; the current OpenAI account returned `insufficient_quota`, so fallback behavior was verified.
+- Telegram publisher is implemented and connected to CLI; real publishing attempt currently fails with `chat not found`.
 - GitHub Actions scheduler is not yet implemented.
 
 ## Remaining Work
 
-### Next Recommended Task: Publish Attempt Tracking And Duplicate Prevention
+### Next Recommended Task: Telegram Channel Configuration And End-To-End Send
 
-Connect Telegram publishing to `publish_attempts`.
+Fix Telegram channel access and rerun one controlled real-send test.
 
 Recommended scope:
 
-- Store `publish_attempts`
-- Generate stable `message_hash` from generated message text
-- Skip publishing when a successful attempt already exists for the same hash
-- Record `success`, `failed`, and useful `skipped` outcomes
-- Keep dry-run behavior external-call-free
-- Add repository/service tests first
+- Rotate the bot token because one local traceback exposed it in a URL
+- Confirm `TELEGRAM_CHANNEL_ID` points to a bot-accessible test channel
+- Add the bot to that channel as admin with post permission
+- Keep `--force-fallback` for the first successful Telegram send
+- After channel send succeeds, decide whether to delete or retain local-fixture DB rows
 
 Suggested files:
 
-- `src/bicycle_road_event_alarm/messaging/publish_history.py`
-- `src/bicycle_road_event_alarm/messaging/publish_service.py`
-- `tests/unit/messaging/test_publish_history.py`
-- `tests/unit/messaging/test_publish_service.py`
+- `.env` only, no Git-tracked file changes required for channel ID/token updates
 
 ### Then: Sprint 7 Scheduling And GitHub Actions
 
@@ -394,9 +425,10 @@ Recommended scope:
 
 - SPATIC live page returned no new raw events during the latest run.
 - Parser may need adjustment when real SPATIC table rows are available.
-- OpenAI live call has not been exercised because there are no publishable events.
-- Real Telegram API publish has not been exercised and should remain disabled until an explicit dry-run/live test step.
-- `publish_attempts` is modeled in DB but not yet written by runtime code.
+- OpenAI live call currently fails with `insufficient_quota`.
+- Real Telegram API publish currently fails with `Bad Request: chat not found`.
+- A local-fixture publishable event now exists in Supabase unless manually deleted later.
+- `publish_attempts` records successful real sends only; dry-run/skipped/failed states are CLI output only for now.
 - Some older Korean docs display mojibake in PowerShell output, but repo files should be handled carefully and not rewritten unless needed.
 - `created_at_column()` in existing DB models still uses `datetime.utcnow`; current tests pass, but a future cleanup can replace this with timezone-aware UTC if desired.
 - Normalization rules are MVP heuristics, not AI-assisted yet.
@@ -409,6 +441,8 @@ Later, before real Telegram publishing:
 
 - Confirm Telegram channel ID
 - Confirm bot is channel admin
+- Rotate the Telegram bot token because an earlier local traceback printed it in a URL
+- Resolve OpenAI API billing/quota before expecting OpenAI-generated messages
 - Confirm publishable fixture or live event exists for end-to-end message generation
 - Decide when to switch:
   - `DRY_RUN=false`

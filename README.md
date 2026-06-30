@@ -115,6 +115,18 @@ python -m bicycle_road_event_alarm.cli.normalize_events
 python -m bicycle_road_event_alarm.cli.generate_messages
 ```
 
+OpenAI 없이 fallback 전체 흐름 검증:
+
+```bash
+python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback
+```
+
+DB/CLI 검증용 publishable 더미 이벤트 생성:
+
+```bash
+python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
+```
+
 ## 4. 기타
 
 ### 현재 구현 상태
@@ -128,6 +140,8 @@ python -m bicycle_road_event_alarm.cli.generate_messages
 - 규칙 기반 `normalized_events` 저장 로직 완료
 - OpenAI wrapper와 규칙 기반 fallback 메시지 생성 완료
 - Telegram publisher wrapper와 dry-run CLI 연결 완료
+- 랜덤 publishable fixture seed CLI 완료
+- `generate_messages --force-fallback` fallback 검증 옵션 완료
 
 자세한 이어받기 문서는 `docs/handoff-current-status.md`를 참고하세요.
 
@@ -149,6 +163,7 @@ DRY_RUN=true
 
 - `publish_attempts` 저장 및 `message_hash` 기반 중복 발송 방지
 - 실제 Telegram 채널 발송 검증
+- OpenAI API quota/billing 설정 확인
 - Sprint 7: GitHub Actions 스케줄러
 - Sprint 8: 통합 테스트와 live test marker
 - Sprint 9: 운영 문서, 모니터링, 릴리즈 체크리스트 보강
