@@ -23,14 +23,14 @@
 
 구현을 시작하려면 최소한 아래 항목이 확정되어야 합니다.
 
-- [ ] Python 패키지 이름: 기본값 `bicycle_road_event_alarm`
-- [ ] 첫 번째 크롤링 출처: 기본 권장 `서울경찰청 교통정보센터`
-- [ ] Supabase 사용 여부: 기본값 사용
-- [ ] Telegram Channel 사용 여부: 기본값 사용
-- [ ] OpenAI API 사용 여부: 기본값 사용
-- [ ] 실제 비밀값은 코드와 문서가 아니라 `.env` 또는 GitHub Actions Secrets에만 입력
-- [ ] live 외부 호출 테스트는 기본 CI에서 제외
-- [ ] 구현 중 코드 기능 블록에는 한글 주석 작성
+- [x] Python 패키지 이름: 기본값 `bicycle_road_event_alarm`
+- [x] 첫 번째 크롤링 출처: 기본 권장 `서울경찰청 교통정보센터`
+- [x] Supabase 사용 여부: 기본값 사용
+- [x] Telegram Channel 사용 여부: 기본값 사용
+- [x] OpenAI API 사용 여부: 기본값 사용
+- [x] 실제 비밀값은 코드와 문서가 아니라 `.env` 또는 GitHub Actions Secrets에만 입력
+- [x] live 외부 호출 테스트는 기본 CI에서 제외
+- [x] 구현 중 코드 기능 블록에는 한글 주석 작성
 
 ## 필수 입력
 
@@ -38,29 +38,29 @@
 
 ### Telegram
 
-- [ ] Telegram Bot Token 발급 여부
-- [ ] Telegram Channel ID 또는 채널 사용자명
-- [ ] 테스트 Channel을 별도로 만들지 여부
-- [ ] Bot을 Channel 관리자로 추가할 운영자
+- [x] Telegram Bot Token 발급 여부
+- [x] Telegram Channel ID 또는 채널 사용자명
+- [x] 테스트 Channel을 별도로 만들지 여부
+- [x] Bot을 Channel 관리자로 추가할 운영자
 
 ### Supabase
 
-- [ ] Supabase 프로젝트 사용 확정
-- [ ] Supabase PostgreSQL 연결 문자열 준비 방식
-- [ ] UUID 생성 확장 사용 가능 여부
-- [ ] 운영 DB 마이그레이션을 수동 승인으로 진행할지 여부
+- [x] Supabase 프로젝트 사용 확정
+- [x] Supabase PostgreSQL 연결 문자열 준비 방식
+- [x] UUID 생성 확장 사용 가능 여부
+- [x] 운영 DB 마이그레이션을 수동 승인으로 진행할지 여부
 
 ### OpenAI
 
-- [ ] OpenAI API Key 사용 가능 여부
-- [ ] 월간 OpenAI 비용 상한
-- [ ] 구현 시점에 사용할 모델 선택 기준
+- [x] OpenAI API Key 사용 가능 여부
+- [x] 월간 OpenAI 비용 상한
+- [x] 구현 시점에 사용할 모델 선택 기준
 
 ### Scheduler
 
-- [ ] 기본 정기 실행 요일과 시간
-- [ ] GitHub Actions 수동 실행 권한을 가진 사용자
-- [ ] 운영 Secret 설정 담당자
+- [x] 기본 정기 실행 요일과 시간
+- [x] GitHub Actions 수동 실행 권한을 가진 사용자
+- [x] 운영 Secret 설정 담당자
 
 ## 기본값으로 진행 가능
 
