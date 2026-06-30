@@ -12,13 +12,14 @@
 2. 원문 이벤트를 Supabase PostgreSQL의 `raw_events`에 저장합니다.
 3. 저장된 원문 이벤트를 날짜, 장소, 이벤트 유형, 자전거 이동 영향도 기준으로 정규화합니다.
 4. 정규화 결과를 `normalized_events`에 중복 없이 저장합니다.
+5. 발송 후보 이벤트를 한국어 알림 메시지로 생성합니다.
+6. Telegram 발송 단계를 안전 플래그와 dry-run 모드로 실행합니다.
 
 아직 구현 예정인 흐름은 다음과 같습니다.
 
-1. 정규화된 이벤트를 기반으로 OpenAI를 사용해 한국어 알림 메시지를 생성합니다.
-2. 실패 시 규칙 기반 fallback 메시지를 생성합니다.
-3. Telegram 채널로 발송하고 발송 이력을 저장합니다.
-4. GitHub Actions로 주말 전 정기 실행합니다.
+1. `publish_attempts`에 발송 이력을 저장하고 중복 발송을 방지합니다.
+2. 실제 Telegram 채널 발송을 운영 플래그로 검증합니다.
+3. GitHub Actions로 주말 전 정기 실행합니다.
 
 ### 페인 포인트
 
@@ -50,7 +51,7 @@
 - Alembic: DB migration 관리
 - Psycopg 3: PostgreSQL 연결
 - Python Dotenv: 로컬 `.env` 로딩
-- OpenAI Python SDK: 메시지 생성 예정
+- OpenAI Python SDK: 알림 메시지 생성
 - Pytest: 테스트
 - Ruff: lint
 - Black: formatting
@@ -108,6 +109,12 @@ python -m bicycle_road_event_alarm.cli.ingest_raw_events
 python -m bicycle_road_event_alarm.cli.normalize_events
 ```
 
+메시지 생성 및 Telegram 발송 단계 실행:
+
+```bash
+python -m bicycle_road_event_alarm.cli.generate_messages
+```
+
 ## 4. 기타
 
 ### 현재 구현 상태
@@ -119,6 +126,8 @@ python -m bicycle_road_event_alarm.cli.normalize_events
 - SPATIC live 수집 CLI 완료
 - `raw_events` 저장 로직 완료
 - 규칙 기반 `normalized_events` 저장 로직 완료
+- OpenAI wrapper와 규칙 기반 fallback 메시지 생성 완료
+- Telegram publisher wrapper와 dry-run CLI 연결 완료
 
 자세한 이어받기 문서는 `docs/handoff-current-status.md`를 참고하세요.
 
@@ -138,8 +147,8 @@ DRY_RUN=true
 
 ### 남은 주요 작업
 
-- Sprint 5: OpenAI 기반 메시지 생성 및 fallback 메시지
-- Sprint 6: Telegram 발송 연동
+- `publish_attempts` 저장 및 `message_hash` 기반 중복 발송 방지
+- 실제 Telegram 채널 발송 검증
 - Sprint 7: GitHub Actions 스케줄러
 - Sprint 8: 통합 테스트와 live test marker
 - Sprint 9: 운영 문서, 모니터링, 릴리즈 체크리스트 보강

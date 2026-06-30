@@ -11,14 +11,14 @@ This document is a handoff note for another local Codex session. It summarizes w
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: user approved direct development on `main`
-- Latest pushed commit at handoff: `98d7dca feat: add normalized event storage`
+- Latest implementation commit covered by this handoff: `2b718a9 feat: add telegram publisher`
 - Current local working tree at last check: clean
 
 ## Project Goal
 
 Weekend Cycling Event Alert Service.
 
-The service collects public event/traffic-control information that may affect bicycle-road users, stores raw events, normalizes them, later generates alert messages, and eventually publishes to Telegram on a schedule.
+The service collects public event/traffic-control information that may affect bicycle-road users, stores raw events, normalizes them, generates alert messages, and can safely dry-run Telegram publishing before real channel delivery is enabled.
 
 ## Approved Documentation
 
@@ -38,7 +38,7 @@ The checklist decisions were resolved using the recommended defaults:
 - Default schedule target: Saturday 06:00 KST
 - Telegram publish disabled by default
 - Supabase PostgreSQL via SQLAlchemy/Alembic
-- OpenAI planned for message generation, with fallback later
+- OpenAI-backed message generation is implemented with deterministic fallback
 - Secrets must stay in `.env` or GitHub Secrets, never in Git-tracked docs/code
 
 ## Environment And Secrets
@@ -202,6 +202,84 @@ Interpretation:
 - The normalized storage flow works.
 - There was no live raw data to normalize at that time.
 
+### 6. Message Generation
+
+Commit: `5d5e241 feat: add message generation`
+
+Implemented:
+
+- `messaging/message_input.py`
+  - message input DTOs for normalized events
+  - DB model to message event conversion
+- `messaging/fallback_generator.py`
+  - deterministic Korean fallback alert message
+  - impact-first sorting
+  - empty event set skip result
+- `messaging/openai_generator.py`
+  - thin OpenAI Responses API wrapper
+  - structured event-only prompt
+  - no raw HTML or secrets in prompt input
+- `messaging/service.py`
+  - OpenAI-first message generation
+  - fallback on OpenAI exception, empty response, long response, or missing source URL
+- `messaging/repository.py`
+  - publishable normalized event selection
+- CLI:
+  - `python -m bicycle_road_event_alarm.cli.generate_messages`
+
+Live verification:
+
+- Command ran successfully
+- Output at that time:
+  - `MESSAGE_STATUS=skipped_empty_event_set`
+  - `MESSAGE_SOURCE=fallback`
+  - `MESSAGE_EVENT_COUNT=0`
+
+Interpretation:
+
+- Message generation flow works.
+- Current DB had no publishable events, so OpenAI was not called in the live run.
+
+### 7. Telegram Publisher
+
+Commit: `2b718a9 feat: add telegram publisher`
+
+Implemented:
+
+- `messaging/telegram_publisher.py`
+  - `TelegramPublishConfig`
+  - `TelegramPublishResult`
+  - `RequestsTelegramClient`
+  - safe publish guard for disabled publishing, dry-run, empty message, and missing config
+- CLI integration:
+  - `generate_messages` now generates a message and passes it to Telegram publisher
+  - CLI prints `TELEGRAM_STATUS`, optional `TELEGRAM_REASON`, and optional `TELEGRAM_MESSAGE_ID`
+- Unit tests:
+  - disabled publish does not call Telegram
+  - dry-run does not call Telegram
+  - empty message skips without external call
+  - missing config fails without external call
+  - enabled non-dry-run uses the injected client
+  - Requests client formats `sendMessage` payload
+  - CLI prints Telegram publish result
+
+Live verification:
+
+- Command ran successfully:
+  - `python -m bicycle_road_event_alarm.cli.generate_messages`
+- Output with current DB:
+  - `MESSAGE_STATUS=skipped_empty_event_set`
+  - `MESSAGE_SOURCE=fallback`
+  - `MESSAGE_EVENT_COUNT=0`
+  - `TELEGRAM_STATUS=skipped`
+  - `TELEGRAM_REASON=empty_message`
+
+Interpretation:
+
+- Telegram publisher is wired into the CLI.
+- No real Telegram API call was made because the generated message was empty.
+- Real Telegram publishing is still gated by `ENABLE_TELEGRAM_PUBLISH=true` and `DRY_RUN=false`.
+
 ## Current Commands
 
 Install/update dev dependencies:
@@ -232,6 +310,12 @@ Run live normalization:
 python -m bicycle_road_event_alarm.cli.normalize_events
 ```
 
+Generate alert message and run Telegram publish step:
+
+```bash
+python -m bicycle_road_event_alarm.cli.generate_messages
+```
+
 Apply DB migrations:
 
 ```bash
@@ -242,11 +326,12 @@ python -m alembic upgrade head
 
 Latest verified baseline before this handoff doc:
 
-- `python -m pytest -q` passed with `32 passed`
+- `python -m pytest -q` passed with `45 passed`
 - `python -m ruff check .` passed
 - `python -m mypy src tests` passed
 - `python -m black --check .` passed
 - `python -m compileall src` passed
+- `python -m bicycle_road_event_alarm.cli.generate_messages` ran successfully against current `.env`/Supabase data
 
 ## Important Implementation Notes
 
@@ -257,45 +342,31 @@ Latest verified baseline before this handoff doc:
 - Current SPATIC parser is intentionally simple and fixture-driven.
 - If SPATIC HTML changes, update fixture first, then parser.
 - Current normalization is deterministic/rule-based only.
-- OpenAI is not yet used in runtime logic.
-- Telegram is not yet used in runtime logic.
+- OpenAI wrapper is implemented, but the live API call has not been exercised because current DB has no publishable events.
+- Telegram publisher is implemented and connected to CLI, but real publishing has not been exercised.
 - GitHub Actions scheduler is not yet implemented.
 
 ## Remaining Work
 
-### Next Recommended Task: Sprint 5 Message Generation
+### Next Recommended Task: Publish Attempt Tracking And Duplicate Prevention
 
-Implement message generation from `normalized_events`.
+Connect Telegram publishing to `publish_attempts`.
 
 Recommended scope:
 
-- Select publishable normalized events:
-  - `publish_candidate=true`
-  - not already successfully published
-- Build deterministic message input DTO
-- Generate Korean alert message
-- Add OpenAI-backed generator with deterministic fallback
-- Keep OpenAI failures non-fatal
-- Add tests with mocked OpenAI client
+- Store `publish_attempts`
+- Generate stable `message_hash` from generated message text
+- Skip publishing when a successful attempt already exists for the same hash
+- Record `success`, `failed`, and useful `skipped` outcomes
+- Keep dry-run behavior external-call-free
+- Add repository/service tests first
 
 Suggested files:
 
-- `src/bicycle_road_event_alarm/messaging/message_builder.py`
-- `src/bicycle_road_event_alarm/messaging/openai_generator.py`
-- `src/bicycle_road_event_alarm/messaging/repository.py`
-- `tests/unit/messaging/*`
-
-### Then: Sprint 6 Telegram Integration
-
-Implement Telegram publishing after message generation.
-
-Recommended scope:
-
-- Telegram client wrapper
-- Dry-run mode support
-- `ENABLE_TELEGRAM_PUBLISH` guard
-- Store `publish_attempts`
-- Avoid duplicate successful publish by `message_hash`
+- `src/bicycle_road_event_alarm/messaging/publish_history.py`
+- `src/bicycle_road_event_alarm/messaging/publish_service.py`
+- `tests/unit/messaging/test_publish_history.py`
+- `tests/unit/messaging/test_publish_service.py`
 
 ### Then: Sprint 7 Scheduling And GitHub Actions
 
@@ -323,6 +394,9 @@ Recommended scope:
 
 - SPATIC live page returned no new raw events during the latest run.
 - Parser may need adjustment when real SPATIC table rows are available.
+- OpenAI live call has not been exercised because there are no publishable events.
+- Real Telegram API publish has not been exercised and should remain disabled until an explicit dry-run/live test step.
+- `publish_attempts` is modeled in DB but not yet written by runtime code.
 - Some older Korean docs display mojibake in PowerShell output, but repo files should be handled carefully and not rewritten unless needed.
 - `created_at_column()` in existing DB models still uses `datetime.utcnow`; current tests pass, but a future cleanup can replace this with timezone-aware UTC if desired.
 - Normalization rules are MVP heuristics, not AI-assisted yet.
@@ -335,6 +409,7 @@ Later, before real Telegram publishing:
 
 - Confirm Telegram channel ID
 - Confirm bot is channel admin
+- Confirm publishable fixture or live event exists for end-to-end message generation
 - Decide when to switch:
   - `DRY_RUN=false`
   - `ENABLE_TELEGRAM_PUBLISH=true`
