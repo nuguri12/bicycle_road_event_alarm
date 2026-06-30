@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,6 +14,8 @@ from bicycle_road_event_alarm.messaging.telegram_publisher import TelegramPublis
 
 @dataclass
 class FakeSessionFactory:
+    committed: bool = False
+
     def __call__(self) -> FakeSessionFactory:
         return self
 
@@ -21,9 +25,13 @@ class FakeSessionFactory:
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
         return None
 
+    def commit(self) -> None:
+        self.committed = True
+
 
 @dataclass
 class PublishedCall:
+    run_id: uuid.UUID
     message: str
     enabled: bool
     dry_run: bool
@@ -57,15 +65,22 @@ def test_generate_messages_cli_prints_telegram_publish_result(
         openai_api_key=None,
     )
     calls: list[PublishedCall] = []
+    run_id = uuid.uuid4()
+    session_factory = FakeSessionFactory()
+    run_log = SimpleNamespace(id=run_id)
 
     def fake_publish(
-        message: str,
+        session: object,
         *,
+        run_id: uuid.UUID,
+        normalized_event_id: uuid.UUID | None,
+        message: str,
         config: TelegramPublishConfig,
         client: object,
     ) -> FakePublishResult:
         calls.append(
             PublishedCall(
+                run_id=run_id,
                 message=message,
                 enabled=config.enabled,
                 dry_run=config.dry_run,
@@ -83,9 +98,11 @@ def test_generate_messages_cli_prints_telegram_publish_result(
     monkeypatch.setattr(
         generate_messages,
         "create_session_factory",
-        lambda _engine: FakeSessionFactory(),
+        lambda _engine: session_factory,
     )
     monkeypatch.setattr(generate_messages, "load_publishable_message_events", lambda _session: [])
+    monkeypatch.setattr(generate_messages, "start_run_log", lambda _session: run_log)
+    monkeypatch.setattr(generate_messages, "finish_run_log", lambda _run_log, **_kwargs: None)
     monkeypatch.setattr(
         generate_messages,
         "generate_alert_message",
@@ -101,11 +118,19 @@ def test_generate_messages_cli_prints_telegram_publish_result(
         "RequestsTelegramClient",
         lambda timeout_seconds: object(),
     )
-    monkeypatch.setattr(generate_messages, "publish_telegram_message", fake_publish)
+    monkeypatch.setattr(generate_messages, "publish_message_once", fake_publish)
 
     assert generate_messages.main() == 0
 
     captured = capsys.readouterr()
     assert "TELEGRAM_STATUS=skipped" in captured.out
     assert "TELEGRAM_REASON=dry_run" in captured.out
-    assert calls == [PublishedCall(message="주의 구간 안내", enabled=True, dry_run=True)]
+    assert calls == [
+        PublishedCall(
+            run_id=run_id,
+            message="주의 구간 안내",
+            enabled=True,
+            dry_run=True,
+        )
+    ]
+    assert session_factory.committed is True

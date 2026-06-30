@@ -6,14 +6,15 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from bicycle_road_event_alarm.config.settings import load_settings
+from bicycle_road_event_alarm.crawler.repository import finish_run_log, start_run_log
 from bicycle_road_event_alarm.db.engine import create_engine_from_settings, create_session_factory
 from bicycle_road_event_alarm.messaging.openai_generator import OpenAIClient, OpenAIMessageGenerator
+from bicycle_road_event_alarm.messaging.publish_service import publish_message_once
 from bicycle_road_event_alarm.messaging.repository import load_publishable_message_events
 from bicycle_road_event_alarm.messaging.service import generate_alert_message
 from bicycle_road_event_alarm.messaging.telegram_publisher import (
     RequestsTelegramClient,
     TelegramPublishConfig,
-    publish_telegram_message,
 )
 
 DEFAULT_OPENAI_MODEL = "gpt-5.2"
@@ -27,26 +28,37 @@ def main() -> int:
     session_factory = create_session_factory(engine)
 
     with session_factory() as session:
+        run_log = start_run_log(session)
         events = load_publishable_message_events(session)
 
-    generator = None
-    if events and settings.openai_api_key is not None:
-        generator = OpenAIMessageGenerator(
-            client=cast(OpenAIClient, OpenAI(api_key=settings.openai_api_key)),
-            model=DEFAULT_OPENAI_MODEL,
-        )
+        generator = None
+        if events and settings.openai_api_key is not None:
+            generator = OpenAIMessageGenerator(
+                client=cast(OpenAIClient, OpenAI(api_key=settings.openai_api_key)),
+                model=DEFAULT_OPENAI_MODEL,
+            )
 
-    result = generate_alert_message(events, openai_generator=generator)
-    publish_result = publish_telegram_message(
-        result.text,
-        config=TelegramPublishConfig(
-            enabled=settings.enable_telegram_publish,
-            dry_run=settings.dry_run,
-            bot_token=settings.telegram_bot_token,
-            channel_id=settings.telegram_channel_id,
-        ),
-        client=RequestsTelegramClient(timeout_seconds=settings.request_timeout_seconds),
-    )
+        result = generate_alert_message(events, openai_generator=generator)
+        publish_result = publish_message_once(
+            session,
+            run_id=run_log.id,
+            normalized_event_id=None,
+            message=result.text,
+            config=TelegramPublishConfig(
+                enabled=settings.enable_telegram_publish,
+                dry_run=settings.dry_run,
+                bot_token=settings.telegram_bot_token,
+                channel_id=settings.telegram_channel_id,
+            ),
+            client=RequestsTelegramClient(timeout_seconds=settings.request_timeout_seconds),
+        )
+        finish_run_log(
+            run_log,
+            raw_event_count=0,
+            normalized_event_count=0,
+            published_message_count=1 if publish_result.status == "success" else 0,
+        )
+        session.commit()
 
     print(f"MESSAGE_STATUS={result.status}")
     print(f"MESSAGE_SOURCE={result.source}")
