@@ -10,6 +10,11 @@ from bicycle_road_event_alarm.db.engine import create_engine_from_settings, crea
 from bicycle_road_event_alarm.messaging.openai_generator import OpenAIClient, OpenAIMessageGenerator
 from bicycle_road_event_alarm.messaging.repository import load_publishable_message_events
 from bicycle_road_event_alarm.messaging.service import generate_alert_message
+from bicycle_road_event_alarm.messaging.telegram_publisher import (
+    RequestsTelegramClient,
+    TelegramPublishConfig,
+    publish_telegram_message,
+)
 
 DEFAULT_OPENAI_MODEL = "gpt-5.2"
 
@@ -32,9 +37,25 @@ def main() -> int:
         )
 
     result = generate_alert_message(events, openai_generator=generator)
+    publish_result = publish_telegram_message(
+        result.text,
+        config=TelegramPublishConfig(
+            enabled=settings.enable_telegram_publish,
+            dry_run=settings.dry_run,
+            bot_token=settings.telegram_bot_token,
+            channel_id=settings.telegram_channel_id,
+        ),
+        client=RequestsTelegramClient(timeout_seconds=settings.request_timeout_seconds),
+    )
+
     print(f"MESSAGE_STATUS={result.status}")
     print(f"MESSAGE_SOURCE={result.source}")
     print(f"MESSAGE_EVENT_COUNT={result.event_count}")
+    print(f"TELEGRAM_STATUS={publish_result.status}")
+    if publish_result.reason is not None:
+        print(f"TELEGRAM_REASON={publish_result.reason}")
+    if publish_result.telegram_message_id is not None:
+        print(f"TELEGRAM_MESSAGE_ID={publish_result.telegram_message_id}")
     if result.text:
         print(result.text)
     return 0
