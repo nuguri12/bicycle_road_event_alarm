@@ -1,6 +1,9 @@
 name: Manual Batch
 
 on:
+  schedule:
+    # Every Friday 07:00 KST. GitHub Actions cron uses UTC.
+    - cron: "0 22 * * 4"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -40,8 +43,8 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
-      ENABLE_TELEGRAM_PUBLISH: ${{ inputs.enable_telegram_publish }}
-      DRY_RUN: ${{ inputs.dry_run }}
+      ENABLE_TELEGRAM_PUBLISH: ${{ github.event_name == 'schedule' && 'true' || inputs.enable_telegram_publish }}
+      DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
 
     steps:
       - name: Check out repository
@@ -82,7 +85,7 @@ jobs:
 
       - name: Generate and publish message
         run: |
-          if [ "${{ inputs.force_fallback }}" = "true" ]; then
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_fallback == 'true' }}" = "true" ]; then
             python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback
           else
             python -m bicycle_road_event_alarm.cli.generate_messages
