@@ -12,8 +12,8 @@ def test_load_settings_uses_safe_defaults() -> None:
     assert settings.dry_run is True
     assert settings.alert_lookahead_days == 14
     assert settings.max_events_per_message == 5
-    assert settings.request_timeout_seconds == 15
-    assert settings.crawler_max_retries == 2
+    assert settings.request_timeout_seconds == 30
+    assert settings.crawler_max_retries == 3
 
 
 def test_load_settings_rejects_invalid_boolean() -> None:

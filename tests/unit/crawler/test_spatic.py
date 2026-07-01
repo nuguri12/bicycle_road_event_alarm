@@ -8,7 +8,7 @@ def test_parse_list_page_extracts_detail_urls() -> None:
 
     urls = parse_list_page(html)
 
-    assert urls == ["https://www.spatic.go.kr/spatic/main/assemView.do?assemId=202606300001"]
+    assert urls == ["https://spatic.go.kr/spatic/main/assemView.do?assemId=202606300001"]
 
 
 def test_parse_detail_page_builds_raw_event_candidate() -> None:

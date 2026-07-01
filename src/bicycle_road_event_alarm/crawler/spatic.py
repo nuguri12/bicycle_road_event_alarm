@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Tag
 from bicycle_road_event_alarm.crawler.raw_event import RawEventCandidate
 
 SOURCE_NAME = "서울경찰청 교통정보센터"
-LIST_URL = "https://www.spatic.go.kr/spatic/main/assem.do"
+LIST_URL = "https://spatic.go.kr/spatic/main/assem.do"
 
 
 # 텍스트 추출: HTML 요소가 없거나 비어 있으면 None으로 통일합니다.

@@ -72,10 +72,10 @@ def load_settings(env: Mapping[str, str] | None = None) -> AppSettings:
             "MAX_EVENTS_PER_MESSAGE", source_env.get("MAX_EVENTS_PER_MESSAGE", "5")
         ),
         request_timeout_seconds=_parse_positive_int(
-            "REQUEST_TIMEOUT_SECONDS", source_env.get("REQUEST_TIMEOUT_SECONDS", "15")
+            "REQUEST_TIMEOUT_SECONDS", source_env.get("REQUEST_TIMEOUT_SECONDS", "30")
         ),
         crawler_max_retries=_parse_positive_int(
-            "CRAWLER_MAX_RETRIES", source_env.get("CRAWLER_MAX_RETRIES", "2")
+            "CRAWLER_MAX_RETRIES", source_env.get("CRAWLER_MAX_RETRIES", "3")
         ),
         supabase_url=_optional_value(source_env, "SUPABASE_URL"),
         supabase_anon_key=_optional_value(source_env, "SUPABASE_ANON_KEY"),
