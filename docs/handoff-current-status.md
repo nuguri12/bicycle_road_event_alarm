@@ -1,70 +1,117 @@
 # Codex Handoff Current Status
 
-## Latest Update: 2026-07-01 Schedule Verification
-
-- Workflow: `.github/workflows/manual-batch.yml`
-- Temporary cron: `*/5 * * * *`
-- Production cron to restore after verification: `0 22 * * 4`
-  - This runs every Friday 07:00 KST because GitHub Actions cron uses UTC.
-- GitHub schedule non-run diagnosis:
-  - Remote workflow state was `active`.
-  - Repository default branch was `main`.
-  - Remote `main` matched local `3bbdbe5` before this update.
-  - Remote workflow contained the 14:30 KST cron.
-  - GitHub API returned zero `event=schedule` runs at inspection time.
-  - Most likely cause: GitHub schedule delay/drop or first scheduled tick not registered after a recent workflow change.
-- Runtime changes made after that diagnosis:
-  - `ingest_raw_events` prints `RUN_ID=<uuid>`.
-  - GitHub Actions captures `RUN_ID` into `BATCH_RUN_ID`.
-  - `normalize_events --run-id "$BATCH_RUN_ID"` scopes normalization to the current ingest run.
-  - `generate_messages --run-id "$BATCH_RUN_ID"` scopes message candidates to the current ingest run.
-  - Empty publishable events produce a dated no-event message.
-  - `publish_attempts` records `success`, `failed`, and non-empty `skipped` outcomes.
-- Operator check after push:
-  - Wait 5-15 minutes and check Actions for a `schedule` event.
-  - Check logs for `RUN_ID=`, `BATCH_RUN_ID`, `MESSAGE_STATUS`, `TELEGRAM_STATUS`.
-  - Check Supabase `publish_attempts` for the latest `skipped`, `failed`, or `success` row.
-
-Last updated: 2026-06-30
+Last updated: 2026-07-01
 
 ## Purpose
 
-This document is a handoff note for another local Codex session. It summarizes what has been approved, implemented, verified, pushed to GitHub, and what remains.
+This document is the handoff note for another local Codex session. It summarizes the current repository state, implemented behavior, operational status, verification baseline, and next recommended tasks.
 
 ## Repository State
 
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
-- Branch strategy: user approved direct development on `main`
-- Latest implementation area covered by this handoff: Telegram publishing, OpenAI message generation, fixture verification, and manual GitHub Actions batch
-- Current local working tree at last check: clean
+- Branch strategy: the user approved direct development on `main`
+- Latest pushed commit at the time of this handoff: `4f2a9ee fix: improve scheduled batch observability`
+- Current local working tree should be clean after the latest push, unless the next session has made changes
 
 ## Project Goal
 
 Weekend Cycling Event Alert Service.
 
-The service collects public event/traffic-control information that may affect bicycle-road users, stores raw events, normalizes them, generates alert messages, and can safely dry-run Telegram publishing before real channel delivery is enabled.
+The service collects public traffic-control and event information that may affect bicycle-road users, stores raw events, normalizes them, generates Korean alert messages, and publishes them to a Telegram channel.
 
-## Approved Documentation
+The MVP source is SPATIC. Additional sources should favor bicycle-relevant data such as Hangang park events and notices rather than broad vehicle traffic feeds.
 
-Sprint 0 through Sprint 9 documentation has been created and approved by the user.
+## Current Operational Status
 
-Important docs:
+### GitHub Actions
 
-- `docs/pre-implementation-checklist.md`
-- `docs/codex-session-summary.md`
-- `docs/sprint0` through `docs/sprint9`
-- `docs/superpowers/specs/*`
-- `docs/superpowers/plans/*`
+- Workflow file: `.github/workflows/manual-batch.yml`
+- Workflow name: `Manual Batch`
+- Current temporary schedule:
 
-The checklist decisions were resolved using the recommended defaults:
+```yaml
+cron: "*/5 * * * *"
+```
 
-- First crawler source: Seoul Metropolitan Police traffic information center / SPATIC
-- Default schedule target: Saturday 06:00 KST
-- Telegram publish disabled by default
-- Supabase PostgreSQL via SQLAlchemy/Alembic
-- OpenAI-backed message generation is implemented with deterministic fallback
-- Secrets must stay in `.env` or GitHub Secrets, never in Git-tracked docs/code
+Purpose:
+
+- This is a temporary smoke test to confirm that GitHub creates `schedule` workflow runs.
+
+Production schedule to restore after verification:
+
+```yaml
+cron: "0 22 * * 4"
+```
+
+Meaning:
+
+- GitHub Actions cron uses UTC.
+- `0 22 * * 4` runs every Friday 07:00 KST.
+
+Scheduled runs force real publish mode:
+
+```env
+ENABLE_TELEGRAM_PUBLISH=true
+DRY_RUN=false
+```
+
+Manual runs keep safe defaults:
+
+```env
+dry_run=true
+enable_telegram_publish=false
+force_fallback=false
+```
+
+### Schedule Non-Run Diagnosis
+
+The 2026-07-01 14:30 KST scheduled run did not appear in GitHub Actions.
+
+Checked evidence:
+
+- GitHub workflow state was `active`.
+- Repository default branch was `main`.
+- Remote `main` contained the expected workflow file.
+- Remote workflow contained the expected cron expression.
+- GitHub API returned zero `event=schedule` runs at inspection time.
+
+Most likely cause:
+
+- GitHub Actions schedule delay/drop, or first scheduled tick not registered after a recent workflow change.
+
+GitHub documentation notes:
+
+- Scheduled workflows can be delayed during high load.
+- Some queued jobs may be dropped if load is high enough.
+- Scheduled workflows only run on the default branch.
+- The shortest supported interval is once every 5 minutes.
+
+Current mitigation:
+
+- The workflow now uses `*/5 * * * *` temporarily.
+- After at least one `event=schedule` run appears and is reviewed, restore the production cron.
+
+## Runtime Flow
+
+Current GitHub Actions batch flow:
+
+1. Apply database migrations.
+2. Run `python -m bicycle_road_event_alarm.cli.ingest_raw_events`.
+3. Capture `RUN_ID=<uuid>` from the ingest output.
+4. Store it as `BATCH_RUN_ID` in `$GITHUB_ENV`.
+5. Run `python -m bicycle_road_event_alarm.cli.normalize_events --run-id "$BATCH_RUN_ID"`.
+6. Run `python -m bicycle_road_event_alarm.cli.generate_messages --run-id "$BATCH_RUN_ID"`.
+7. If manual `force_fallback=true`, add `--force-fallback`.
+
+Important behavior:
+
+- `ingest_raw_events` always emits `RUN_ID=<uuid>`.
+- `normalize_events --run-id` processes only raw events from the current ingest run.
+- `generate_messages --run-id` selects publishable events only from the current ingest run.
+- Empty publishable event sets generate a dated no-event message.
+- Non-empty publish outcomes are recorded in `publish_attempts` for `success`, `failed`, and `skipped`.
+- Empty message skips are not recorded because they do not represent a publishable message.
 
 ## Environment And Secrets
 
@@ -76,46 +123,35 @@ The user has created:
 
 Local `.env` exists and is ignored by Git.
 
-Known local `.env` status:
+Required GitHub Repository Secrets:
 
-- `SUPABASE_DATABASE_URL` uses Supabase Transaction Pooler
-- Supabase `SELECT 1` succeeded
-- Alembic initial migration was applied successfully
-- `ENABLE_TELEGRAM_PUBLISH=false`
-- `DRY_RUN=true`
+- `SUPABASE_DATABASE_URL`
+- `OPENAI_API_KEY`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHANNEL_ID`
+
+Known Telegram channel status:
+
+- Private Telegram channel was verified.
+- Channel ID used during verification: `-1004448224539`
+- Bot was able to send real messages after the channel ID and permissions were fixed.
 
 Do not print or commit secret values.
 
-## Implemented So Far
+## Implemented Features
 
-### 1. Python Project Bootstrap
-
-Commit: `c1c313f chore: bootstrap python project`
-
-Implemented:
+### Project Bootstrap
 
 - `pyproject.toml`
 - `.gitignore`
 - `.env.example`
 - package skeleton under `src/bicycle_road_event_alarm`
 - settings loader in `config/settings.py`
-- initial unit tests
+- unit test baseline
 
-Validation at the time:
+### Supabase DB Setup
 
-- Pytest passed
-- Ruff passed
-- Mypy passed
-- Black check passed
-- Compileall passed
-
-### 2. Supabase DB Setup
-
-Commit: `585a05e feat: add supabase database setup`
-
-Implemented:
-
-- SQLAlchemy DB engine/session helpers
+- SQLAlchemy engine/session helpers
 - DB health check
 - ORM models:
   - `run_logs`
@@ -123,239 +159,75 @@ Implemented:
   - `normalized_events`
   - `publish_attempts`
 - Alembic environment
-- Initial migration: `0001_initial_schema`
-- Tests for DB models, migration metadata, health check, URL handling
+- Initial migration
+- Partial unique success index for publish deduplication
 
-Live verification:
+### Raw Event Ingestion
 
-- Supabase Transaction Pooler `SELECT 1` succeeded
-- `python -m alembic upgrade head` succeeded
-- DB tables present
-- Alembic version: `0001_initial_schema`
+- SPATIC fixture parser
+- SPATIC live ingestion
+- request timeout/retry wrapper
+- raw candidate hashing
+- duplicate-aware `raw_events` save
+- run log start/finish helpers
+- CLI: `python -m bicycle_road_event_alarm.cli.ingest_raw_events`
+- graceful source timeout handling:
+  - prints `INGEST_STATUS=skipped`
+  - prints `INGEST_REASON=source_unavailable`
+  - exits successfully so the rest of the batch can still report no-event status
 
-### 3. Raw Event Ingestion
+### Normalization
 
-Commit: `2dc353f feat: add raw event ingestion`
+- title cleanup
+- date/time parsing
+- location detection
+- event type classification
+- cyclist impact classification
+- deterministic duplicate key
+- publish candidate flag
+- duplicate-aware normalized save
+- CLI: `python -m bicycle_road_event_alarm.cli.normalize_events`
+- run-scoped CLI option: `--run-id`
 
-Implemented:
+### Message Generation
 
-- `crawler/raw_event.py`
-  - `RawEventCandidate`
-  - deterministic `content_hash`
-- `crawler/spatic.py`
-  - fixture-based SPATIC list parser
-  - fixture-based SPATIC detail parser
-- `crawler/repository.py`
-  - raw event model conversion
-  - duplicate-aware `raw_events` save
-- SPATIC fixture HTML
-- unit tests
+- message input DTOs
+- publishable event repository
+- OpenAI wrapper
+- deterministic fallback generator
+- OpenAI-first message generation service
+- fallback on OpenAI errors or invalid output
+- no-event fallback message with generated date
+- CLI: `python -m bicycle_road_event_alarm.cli.generate_messages`
+- run-scoped CLI option: `--run-id`
+- fallback option: `--force-fallback`
 
-Notes:
+### Telegram Publishing
 
-- This step was fixture based.
-- Live SPATIC fetching was implemented in the next step.
+- `TelegramPublishConfig`
+- `TelegramPublishResult`
+- `RequestsTelegramClient`
+- guarded publish behavior:
+  - disabled publishing
+  - dry-run
+  - missing config
+  - empty message
+  - client failure
+- duplicate successful publish prevention
+- `publish_attempts` records:
+  - `success`
+  - `failed`
+  - non-empty `skipped`
 
-### 4. Live SPATIC Ingestion
+### Fixtures And Local Verification Helpers
 
-Commit: `44431aa feat: add live spatic ingestion`
-
-Implemented:
-
-- `crawler/http.py`
-  - `requests` based HTTP client
-  - retry for 429 and 5xx
-  - no retry for 4xx
-- `crawler/spatic_ingestion.py`
-  - list page fetch
-  - detail page fetch
-  - candidate parsing
-- `crawler/repository.py`
-  - `start_run_log`
-  - `finish_run_log`
-- CLI:
-  - `python -m bicycle_road_event_alarm.cli.ingest_raw_events`
-
-Live verification:
-
-- Command ran successfully
-- Output: `RAW_EVENTS_SAVED=0`
-- Supabase latest run log:
-  - `status=success`
-  - `raw_event_count=0`
-
-Interpretation:
-
-- The live flow works.
-- SPATIC had no currently parseable/storable new event rows at that time.
-
-### 5. Normalized Event Storage
-
-Commit: `98d7dca feat: add normalized event storage`
-
-Implemented:
-
-- `normalization/title.py`
-  - title cleanup
-  - body fallback
-- `normalization/datetime.py`
-  - numeric date/time range parsing such as `2026.07.04 08:00 ~ 12:00`
-- `normalization/location.py`
-  - Seoul/Gyeonggi keyword-based location detection
-- `normalization/classifier.py`
-  - event type and cyclist impact classification
-- `normalization/normalizer.py`
-  - `RawEvent` to `NormalizedEventData`
-  - deterministic duplicate key
-  - validation status
-  - publish candidate flag
-- `normalization/repository.py`
-  - duplicate-aware `normalized_events` save
-- CLI:
-  - `python -m bicycle_road_event_alarm.cli.normalize_events`
-
-Live verification:
-
-- Command ran successfully
-- Output: `NORMALIZED_EVENTS_SAVED=0`
-- Supabase counts:
-  - `RAW_EVENTS_COUNT=0`
-  - `NORMALIZED_EVENTS_COUNT=0`
-
-Interpretation:
-
-- The normalized storage flow works.
-- There was no live raw data to normalize at that time.
-
-### 6. Message Generation
-
-Commit: `5d5e241 feat: add message generation`
-
-Implemented:
-
-- `messaging/message_input.py`
-  - message input DTOs for normalized events
-  - DB model to message event conversion
-- `messaging/fallback_generator.py`
-  - deterministic Korean fallback alert message
-  - impact-first sorting
-  - empty event set skip result
-- `messaging/openai_generator.py`
-  - thin OpenAI Responses API wrapper
-  - structured event-only prompt
-  - no raw HTML or secrets in prompt input
-- `messaging/service.py`
-  - OpenAI-first message generation
-  - fallback on OpenAI exception, empty response, long response, or missing source URL
-- `messaging/repository.py`
-  - publishable normalized event selection
-- CLI:
-  - `python -m bicycle_road_event_alarm.cli.generate_messages`
-
-Live verification:
-
-- Command ran successfully
-- Output at that time:
-  - `MESSAGE_STATUS=skipped_empty_event_set`
-  - `MESSAGE_SOURCE=fallback`
-  - `MESSAGE_EVENT_COUNT=0`
-
-Interpretation:
-
-- Message generation flow works.
-- Current DB had no publishable events, so OpenAI was not called in the live run.
-
-### 7. Telegram Publisher And Fixture Verification
-
-Commit: `2b718a9 feat: add telegram publisher`
-
-Implemented:
-
-- `messaging/telegram_publisher.py`
-  - `TelegramPublishConfig`
-  - `TelegramPublishResult`
-  - `RequestsTelegramClient`
-  - safe publish guard for disabled publishing, dry-run, empty message, and missing config
-- CLI integration:
-  - `generate_messages` now generates a message and passes it to Telegram publisher
-  - `generate_messages --force-fallback` skips OpenAI and forces deterministic fallback
-  - CLI prints `TELEGRAM_STATUS`, optional `TELEGRAM_REASON`, and optional `TELEGRAM_MESSAGE_ID`
-- Fixture support:
-  - `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture`
-  - inserts one random local-fixture `run_logs`, `raw_events`, and publishable `normalized_events` set
-- Unit tests:
-  - disabled publish does not call Telegram
-  - dry-run does not call Telegram
-  - empty message skips without external call
-  - missing config fails without external call
-  - enabled non-dry-run uses the injected client
-  - Requests client formats `sendMessage` payload
-  - CLI prints Telegram publish result
-
-Live verification:
-
-- Command ran successfully:
-  - `python -m bicycle_road_event_alarm.cli.generate_messages`
-- Output with current DB:
-  - `MESSAGE_STATUS=skipped_empty_event_set`
-  - `MESSAGE_SOURCE=fallback`
-  - `MESSAGE_EVENT_COUNT=0`
-  - `TELEGRAM_STATUS=skipped`
-  - `TELEGRAM_REASON=empty_message`
-
-Interpretation:
-
-- Telegram publisher is wired into the CLI.
-- No real Telegram API call was made because the generated message was empty.
-- Real Telegram publishing is still gated by `ENABLE_TELEGRAM_PUBLISH=true` and `DRY_RUN=false`.
-
-Additional live verification after fixture support:
-
-- `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture` succeeded
-- `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` succeeded
-  - `MESSAGE_STATUS=generated`
-  - `MESSAGE_SOURCE=fallback`
-  - `MESSAGE_EVENT_COUNT=1`
-  - `TELEGRAM_STATUS=skipped`
-  - `TELEGRAM_REASON=telegram_publish_disabled`
-- OpenAI API path was attempted with the seeded event
-  - Initial API attempt returned `insufficient_quota`
-  - After billing was corrected, `MESSAGE_SOURCE=openai` was verified through the real CLI
-  - Runtime fallback behavior was also verified when OpenAI failed
-- Telegram real-send path was attempted with one fallback message
-  - sanitized runtime output: `TELEGRAM_STATUS=failed`, `TELEGRAM_REASON=telegram_send_failed`
-  - direct sanitized diagnostic returned `Bad Request: chat not found`
-  - likely causes: wrong `TELEGRAM_CHANNEL_ID`, bot not added to the channel, or bot missing channel admin/post permission
-  - One earlier traceback exposed the bot token in a Telegram API URL; rotate the Telegram bot token in BotFather before any public sharing of logs.
-
-Follow-up Telegram verification:
-
-- New bot token was validated with `getMe`
-- Private channel was discovered through `getUpdates`
-  - channel title: `Bicycle_Road`
-  - channel type: `channel`
-  - channel id to use in `.env`: `-1004448224539`
-- `getChat` with that channel id succeeded
-- `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` with:
-  - `TELEGRAM_CHANNEL_ID=-1004448224539`
-  - `ENABLE_TELEGRAM_PUBLISH=true`
-  - `DRY_RUN=false`
-  succeeded:
-  - `TELEGRAM_STATUS=success`
-  - `TELEGRAM_MESSAGE_ID=6`
-- Re-running the same command produced:
-  - `TELEGRAM_STATUS=skipped`
-  - `TELEGRAM_REASON=duplicate_successful_publish`
-- A CLI bug was found and fixed: `run_logs` must be flushed before recording `publish_attempts`, otherwise successful Telegram sends can fail during DB commit with a foreign-key error.
-- The local-fixture DB rows were later removed:
-  - `LOCAL_FIXTURE_RAW_COUNT=0`
-  - `LOCAL_FIXTURE_NORMALIZED_COUNT=0`
-  - `LOCAL_FIXTURE_PUBLISHABLE_COUNT=0`
-  - `TOTAL_PUBLISHABLE_COUNT=0`
+- CLI: `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture`
+- Creates one random local publishable fixture event for DB/CLI end-to-end verification.
+- Fixture rows were removed after real Telegram verification.
 
 ## Current Commands
 
-Install/update dev dependencies:
+Install dependencies:
 
 ```bash
 python -m pip install -e .[dev]
@@ -371,142 +243,124 @@ python -m black --check .
 python -m compileall src
 ```
 
-Run live raw ingestion:
-
-```bash
-python -m bicycle_road_event_alarm.cli.ingest_raw_events
-```
-
-Run live normalization:
-
-```bash
-python -m bicycle_road_event_alarm.cli.normalize_events
-```
-
-Generate alert message and run Telegram publish step:
-
-```bash
-python -m bicycle_road_event_alarm.cli.generate_messages
-```
-
-Force fallback without OpenAI:
-
-```bash
-python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback
-```
-
-Seed one random publishable fixture event:
-
-```bash
-python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
-```
-
-Apply DB migrations:
+Apply migrations:
 
 ```bash
 python -m alembic upgrade head
 ```
 
-## Current Verification Baseline
+Run ingestion:
 
-Latest verified baseline before this handoff doc:
+```bash
+python -m bicycle_road_event_alarm.cli.ingest_raw_events
+```
 
-- `python -m pytest -q` passed with `57 passed`
-- `python -m ruff check .` passed
-- `python -m mypy src tests` passed
-- `python -m black --check .` passed
-- `python -m compileall src` passed
-- `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture` ran successfully against current `.env`/Supabase data
-- `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` ran successfully against current `.env`/Supabase data
-- Telegram real-send verification succeeded with the private channel id override `-1004448224539`
-- Duplicate publish prevention succeeded after the first successful Telegram send
+Run normalization for a specific ingest run:
 
-## Important Implementation Notes
+```bash
+python -m bicycle_road_event_alarm.cli.normalize_events --run-id "<RUN_ID>"
+```
 
-- Default Telegram publish is off.
-- `.env` is ignored and contains local secrets.
-- `.env.example` must remain secret-free.
-- Live crawler tests should not be part of default unit tests.
-- Current SPATIC parser is intentionally simple and fixture-driven.
-- If SPATIC HTML changes, update fixture first, then parser.
-- Current normalization is deterministic/rule-based only.
-- OpenAI wrapper is implemented and the real CLI has accepted an OpenAI-generated message.
-- Telegram publisher is implemented and connected to CLI; real publishing succeeded after using private channel id `-1004448224539`.
-- GitHub Actions scheduler is not yet implemented.
-- GitHub Actions manual batch workflow is implemented, but has not yet been run from GitHub.
+Generate and publish for a specific ingest run:
 
-## Remaining Work
+```bash
+python -m bicycle_road_event_alarm.cli.generate_messages --run-id "<RUN_ID>"
+```
 
-### Next Recommended Task: Configure GitHub Secrets And Run Manual Batch
+Force fallback:
 
-Configure repository secrets and run the manual GitHub Actions batch once with safe defaults.
+```bash
+python -m bicycle_road_event_alarm.cli.generate_messages --run-id "<RUN_ID>" --force-fallback
+```
 
-Recommended scope:
+Seed a test publishable fixture:
 
-- Add/update GitHub Secrets for Telegram/OpenAI/Supabase
-- Run `Manual Batch` with default safe inputs:
-  - `dry_run=true`
-  - `enable_telegram_publish=false`
-  - `force_fallback=false`
-- Review workflow logs for secret masking, DB migration, ingestion, normalization, and message generation
-- Only after manual dry-run passes, run a controlled publish with:
-  - `dry_run=false`
-  - `enable_telegram_publish=true`
-- Keep scheduled production publish disabled until manual dispatch is verified
+```bash
+python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
+```
 
-Suggested files:
+## Latest Verification Baseline
 
-- `.github/workflows/*`
-- `docs/handoff-current-status.md`
-- `README.md`
+Latest full local verification before this handoff:
 
-### Then: Sprint 7 Scheduling And GitHub Actions
+```text
+python -m pytest -q
+66 passed
 
-Implement CI/scheduled execution.
+python -m ruff check .
+All checks passed!
 
-Recommended scope:
+python -m mypy src tests
+Success: no issues found in 63 source files
 
-- Saturday 06:00 KST schedule after manual batch succeeds
-- manual dispatch
-- GitHub Secrets mapping
-- default tests without live external calls
+python -m black --check .
+66 files would be left unchanged
 
-### Then: Sprint 8/9 Hardening
+python -m compileall src
+success
+```
 
-Recommended scope:
+Remote verification after push:
 
-- integration tests with explicit live markers
-- error recovery
-- operation manual updates
-- monitoring/logging refinement
-- release checklist
+- GitHub `main` contained `cron: "*/5 * * * *"`.
+- GitHub `main` contained `BATCH_RUN_ID` capture.
+- GitHub `main` contained `normalize_events --run-id "$BATCH_RUN_ID"`.
+- GitHub `main` contained `generate_messages --run-id "$BATCH_RUN_ID"`.
 
-## Current Known Risks
+## Operator Checks
 
-- SPATIC live page returned no new raw events during the latest run.
-- Parser may need adjustment when real SPATIC table rows are available.
-- OpenAI live call succeeded after billing/quota was corrected.
-- Real Telegram API publish succeeded when using the discovered private channel id.
-- Local-fixture publishable rows were deleted from Supabase after Telegram verification.
-- `publish_attempts` records successful real sends only; dry-run/skipped/failed states are CLI output only for now.
-- Manual GitHub Actions workflow exists, but repository secrets and GitHub-side run are not verified yet.
-- Some older Korean docs display mojibake in PowerShell output, but repo files should be handled carefully and not rewritten unless needed.
-- `created_at_column()` in existing DB models still uses `datetime.utcnow`; current tests pass, but a future cleanup can replace this with timezone-aware UTC if desired.
-- Normalization rules are MVP heuristics, not AI-assisted yet.
+After the latest push, check GitHub Actions:
 
-## What The User Needs To Do
+1. Open the repository Actions tab.
+2. Select `Manual Batch`.
+3. Wait for a run with event type `schedule`.
+4. Open the run logs.
+5. Confirm:
+   - `RUN_ID=<uuid>`
+   - `MESSAGE_STATUS=generated`
+   - `MESSAGE_SOURCE=openai` or `MESSAGE_SOURCE=fallback`
+   - `MESSAGE_EVENT_COUNT=<number>`
+   - `TELEGRAM_STATUS=success`, `failed`, or `skipped`
 
-Nothing required before the next implementation step.
+Check Supabase:
 
-Later, before real Telegram publishing:
+```sql
+select id, status, started_at, finished_at, raw_event_count, normalized_event_count, published_message_count, error_summary
+from run_logs
+order by started_at desc
+limit 10;
+```
 
-- Confirm Telegram channel ID
-- Confirm bot is channel admin
-- Rotate the Telegram bot token because an earlier local traceback printed it in a URL
-- Confirm publishable fixture or live event exists for end-to-end message generation
-- Set GitHub Secrets `TELEGRAM_CHANNEL_ID` to `-1004448224539`
-- Decide when to switch:
-  - `DRY_RUN=false`
-  - `ENABLE_TELEGRAM_PUBLISH=true`
+```sql
+select run_id, status, failure_reason, attempted_at, telegram_channel_id
+from publish_attempts
+order by attempted_at desc
+limit 10;
+```
 
-Until then, keep publish disabled.
+If a schedule run appears and behaves as expected, restore production cron:
+
+```yaml
+cron: "0 22 * * 4"
+```
+
+## Known Risks
+
+- GitHub Actions schedule is not a strict real-time scheduler.
+- The first scheduled run after workflow edits may be delayed or missed.
+- SPATIC is not bicycle-specific and may be unstable or return no parseable events.
+- Source outage and true no-event status are still not fully separated in the final user-facing message.
+- The current SPATIC parser is fixture-driven and may require fixture updates when real HTML changes.
+- Normalization rules are deterministic MVP heuristics.
+- Some older sprint docs may still contain mojibake text from earlier encoding issues.
+
+## Recommended Next Tasks
+
+1. Monitor the temporary `*/5 * * * *` schedule.
+2. If a schedule run appears, inspect logs and Supabase rows.
+3. Restore production cron to `0 22 * * 4`.
+4. Add the next source with better bicycle relevance:
+   - Recommended first: Hangang park events.
+   - Recommended second: Hangang park notices.
+5. Improve source outage vs true no-event messaging.
+6. Consider recording a clearer run-level publish summary in `run_logs`.
