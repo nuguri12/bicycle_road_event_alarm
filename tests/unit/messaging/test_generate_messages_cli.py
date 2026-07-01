@@ -16,6 +16,7 @@ from bicycle_road_event_alarm.messaging.telegram_publisher import TelegramPublis
 @dataclass
 class FakeSessionFactory:
     committed: bool = False
+    flushed: bool = False
 
     def __call__(self) -> FakeSessionFactory:
         return self
@@ -28,6 +29,9 @@ class FakeSessionFactory:
 
     def commit(self) -> None:
         self.committed = True
+
+    def flush(self) -> None:
+        self.flushed = True
 
 
 @dataclass
@@ -135,6 +139,7 @@ def test_generate_messages_cli_prints_telegram_publish_result(
         )
     ]
     assert session_factory.committed is True
+    assert session_factory.flushed is True
 
 
 def test_generate_messages_cli_force_fallback_does_not_create_openai_generator(

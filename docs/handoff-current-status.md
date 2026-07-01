@@ -302,6 +302,26 @@ Additional live verification after fixture support:
   - likely causes: wrong `TELEGRAM_CHANNEL_ID`, bot not added to the channel, or bot missing channel admin/post permission
   - One earlier traceback exposed the bot token in a Telegram API URL; rotate the Telegram bot token in BotFather before any public sharing of logs.
 
+Follow-up Telegram verification:
+
+- New bot token was validated with `getMe`
+- Private channel was discovered through `getUpdates`
+  - channel title: `Bicycle_Road`
+  - channel type: `channel`
+  - channel id to use in `.env`: `-1004448224539`
+- `getChat` with that channel id succeeded
+- `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` with:
+  - `TELEGRAM_CHANNEL_ID=-1004448224539`
+  - `ENABLE_TELEGRAM_PUBLISH=true`
+  - `DRY_RUN=false`
+  succeeded:
+  - `TELEGRAM_STATUS=success`
+  - `TELEGRAM_MESSAGE_ID=6`
+- Re-running the same command produced:
+  - `TELEGRAM_STATUS=skipped`
+  - `TELEGRAM_REASON=duplicate_successful_publish`
+- A CLI bug was found and fixed: `run_logs` must be flushed before recording `publish_attempts`, otherwise successful Telegram sends can fail during DB commit with a foreign-key error.
+
 ## Current Commands
 
 Install/update dev dependencies:
@@ -367,6 +387,8 @@ Latest verified baseline before this handoff doc:
 - `python -m compileall src` passed
 - `python -m bicycle_road_event_alarm.cli.seed_publishable_fixture` ran successfully against current `.env`/Supabase data
 - `python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback` ran successfully against current `.env`/Supabase data
+- Telegram real-send verification succeeded with the private channel id override `-1004448224539`
+- Duplicate publish prevention succeeded after the first successful Telegram send
 
 ## Important Implementation Notes
 
@@ -378,26 +400,28 @@ Latest verified baseline before this handoff doc:
 - If SPATIC HTML changes, update fixture first, then parser.
 - Current normalization is deterministic/rule-based only.
 - OpenAI wrapper is implemented and the live API call was attempted; the current OpenAI account returned `insufficient_quota`, so fallback behavior was verified.
-- Telegram publisher is implemented and connected to CLI; real publishing attempt currently fails with `chat not found`.
+- Telegram publisher is implemented and connected to CLI; real publishing succeeded after using private channel id `-1004448224539`.
 - GitHub Actions scheduler is not yet implemented.
 
 ## Remaining Work
 
-### Next Recommended Task: Telegram Channel Configuration And End-To-End Send
+### Next Recommended Task: Persist Environment Settings And Prepare Scheduler
 
-Fix Telegram channel access and rerun one controlled real-send test.
+Persist the verified Telegram channel id in local/GitHub environments, then prepare scheduler deployment.
 
 Recommended scope:
 
-- Rotate the bot token because one local traceback exposed it in a URL
-- Confirm `TELEGRAM_CHANNEL_ID` points to a bot-accessible test channel
-- Add the bot to that channel as admin with post permission
-- Keep `--force-fallback` for the first successful Telegram send
-- After channel send succeeds, decide whether to delete or retain local-fixture DB rows
+- Update local `.env` `TELEGRAM_CHANNEL_ID` to `-1004448224539`
+- Add/update GitHub Secrets for Telegram/OpenAI/Supabase
+- Decide whether to keep or delete local-fixture DB rows before production schedule
+- Implement GitHub Actions workflow with manual dispatch first
+- Keep scheduled production publish disabled until manual dispatch is verified
 
 Suggested files:
 
-- `.env` only, no Git-tracked file changes required for channel ID/token updates
+- `.github/workflows/*`
+- `docs/handoff-current-status.md`
+- `README.md`
 
 ### Then: Sprint 7 Scheduling And GitHub Actions
 
@@ -426,7 +450,8 @@ Recommended scope:
 - SPATIC live page returned no new raw events during the latest run.
 - Parser may need adjustment when real SPATIC table rows are available.
 - OpenAI live call currently fails with `insufficient_quota`.
-- Real Telegram API publish currently fails with `Bad Request: chat not found`.
+- Real Telegram API publish succeeded when using the discovered private channel id.
+- Local `.env` was not modified by Codex; update `TELEGRAM_CHANNEL_ID=-1004448224539` before future runs without a temporary override.
 - A local-fixture publishable event now exists in Supabase unless manually deleted later.
 - `publish_attempts` records successful real sends only; dry-run/skipped/failed states are CLI output only for now.
 - Some older Korean docs display mojibake in PowerShell output, but repo files should be handled carefully and not rewritten unless needed.
@@ -444,6 +469,7 @@ Later, before real Telegram publishing:
 - Rotate the Telegram bot token because an earlier local traceback printed it in a URL
 - Resolve OpenAI API billing/quota before expecting OpenAI-generated messages
 - Confirm publishable fixture or live event exists for end-to-end message generation
+- Set local `.env` and GitHub Secrets `TELEGRAM_CHANNEL_ID` to `-1004448224539`
 - Decide when to switch:
   - `DRY_RUN=false`
   - `ENABLE_TELEGRAM_PUBLISH=true`

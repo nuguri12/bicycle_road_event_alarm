@@ -142,6 +142,7 @@ python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
 - Telegram publisher wrapper와 dry-run CLI 연결 완료
 - 랜덤 publishable fixture seed CLI 완료
 - `generate_messages --force-fallback` fallback 검증 옵션 완료
+- Private Telegram 채널 실제 발송 및 중복 발송 방지 검증 완료
 
 자세한 이어받기 문서는 `docs/handoff-current-status.md`를 참고하세요.
 
@@ -162,8 +163,8 @@ DRY_RUN=true
 ### 남은 주요 작업
 
 - `publish_attempts` 저장 및 `message_hash` 기반 중복 발송 방지
-- 실제 Telegram 채널 발송 검증
+- GitHub Actions 스케줄러
 - OpenAI API quota/billing 설정 확인
-- Sprint 7: GitHub Actions 스케줄러
+- 테스트 fixture 데이터 정리 정책 결정
 - Sprint 8: 통합 테스트와 live test marker
 - Sprint 9: 운영 문서, 모니터링, 릴리즈 체크리스트 보강

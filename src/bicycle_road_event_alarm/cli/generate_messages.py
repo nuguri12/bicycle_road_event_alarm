@@ -41,6 +41,7 @@ def main(argv: list[str] | None = None) -> int:
 
     with session_factory() as session:
         run_log = start_run_log(session)
+        session.flush()
         events = load_publishable_message_events(session)
 
         generator = None
