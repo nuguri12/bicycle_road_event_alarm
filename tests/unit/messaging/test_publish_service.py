@@ -17,6 +17,11 @@ class FakeTelegramClient:
         return "telegram-message-1"
 
 
+class FailingTelegramClient:
+    def send_message(self, *, bot_token: str, channel_id: str, text: str) -> str:
+        raise RuntimeError("telegram down")
+
+
 def test_publish_message_once_skips_when_successful_hash_already_exists() -> None:
     session = Mock()
     session.scalar.return_value = uuid.uuid4()
@@ -120,3 +125,32 @@ def test_publish_message_once_does_not_record_dry_run_attempt() -> None:
     assert result.reason == "dry_run"
     assert client.calls == []
     session.add.assert_not_called()
+
+
+def test_publish_message_once_records_failed_send_attempt() -> None:
+    session = Mock()
+    session.scalar.return_value = None
+    run_id = uuid.uuid4()
+
+    result = publish_message_once(
+        session,
+        run_id=run_id,
+        normalized_event_id=None,
+        message="이번 주말 자전거 주의 이벤트가 없습니다.",
+        config=TelegramPublishConfig(
+            enabled=True,
+            dry_run=False,
+            bot_token="bot-token",
+            channel_id="@cycling_alerts",
+        ),
+        client=FailingTelegramClient(),
+    )
+
+    assert result.status == "failed"
+    assert result.reason == "telegram_send_failed"
+    publish_attempt = session.add.call_args.args[0]
+    assert publish_attempt.run_id == run_id
+    assert publish_attempt.normalized_event_id is None
+    assert publish_attempt.telegram_channel_id == "@cycling_alerts"
+    assert publish_attempt.status == "failed"
+    assert publish_attempt.failure_reason == "telegram_send_failed"

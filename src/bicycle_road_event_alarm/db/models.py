@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -88,7 +88,14 @@ class NormalizedEvent(Base):
 # 발송 시도: Telegram 메시지 발송 결과와 실패 사유를 남깁니다.
 class PublishAttempt(Base):
     __tablename__ = "publish_attempts"
-    __table_args__ = (UniqueConstraint("message_hash", name="uq_publish_attempts_message_hash"),)
+    __table_args__ = (
+        Index(
+            "uq_publish_attempts_success_message_hash",
+            "message_hash",
+            unique=True,
+            postgresql_where=text("status = 'success'"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = uuid_primary_key()
     run_id: Mapped[uuid.UUID] = mapped_column(

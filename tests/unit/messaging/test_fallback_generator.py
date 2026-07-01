@@ -46,6 +46,6 @@ def test_generate_fallback_message_sorts_by_impact_then_datetime() -> None:
 def test_generate_fallback_message_skips_empty_events() -> None:
     result = generate_fallback_message([])
 
-    assert result.status == "skipped_empty_event_set"
-    assert result.text == ""
+    assert result.status == "generated"
+    assert result.text == "이번 주말 자전거 주의 이벤트가 없습니다."
     assert result.event_count == 0

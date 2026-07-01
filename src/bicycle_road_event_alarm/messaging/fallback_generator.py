@@ -9,9 +9,9 @@ IMPACT_ORDER = {"high": 0, "medium": 1, "low": 2}
 def generate_fallback_message(events: list[MessageEvent]) -> GeneratedMessage:
     if not events:
         return GeneratedMessage(
-            text="",
+            text="이번 주말 자전거 주의 이벤트가 없습니다.",
             source="fallback",
-            status="skipped_empty_event_set",
+            status="generated",
             event_count=0,
         )
 

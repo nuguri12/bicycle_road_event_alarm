@@ -2,8 +2,8 @@ name: Manual Batch
 
 on:
   schedule:
-    # Temporary live SPATIC verification at 13:45 KST. GitHub Actions cron uses UTC.
-    - cron: "45 4 * * *"
+    # Temporary live SPATIC verification at 14:30 KST. GitHub Actions cron uses UTC.
+    - cron: "30 5 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

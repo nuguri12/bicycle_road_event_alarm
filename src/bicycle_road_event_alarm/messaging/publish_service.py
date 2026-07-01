@@ -43,7 +43,7 @@ def publish_message_once(
         )
 
     result = publish_telegram_message(message, config=config, client=client)
-    if result.status == "success":
+    if result.status in {"success", "failed"}:
         record_publish_attempt(
             session,
             run_id=run_id,
