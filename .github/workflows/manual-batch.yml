@@ -2,8 +2,9 @@ name: Manual Batch
 
 on:
   schedule:
-    # Temporary live SPATIC verification at 14:30 KST. GitHub Actions cron uses UTC.
-    - cron: "30 5 * * *"
+    # Temporary schedule smoke test. Restore production schedule to "0 22 * * 4" after verification.
+    # "0 22 * * 4" runs every Friday 07:00 KST because GitHub Actions cron uses UTC.
+    - cron: "*/5 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -78,15 +79,23 @@ jobs:
         run: python -m alembic upgrade head
 
       - name: Ingest raw events
-        run: python -m bicycle_road_event_alarm.cli.ingest_raw_events
+        run: |
+          ingest_output="$(python -m bicycle_road_event_alarm.cli.ingest_raw_events)"
+          echo "$ingest_output"
+          batch_run_id="$(echo "$ingest_output" | sed -n 's/^RUN_ID=//p' | tail -n 1)"
+          if [ -z "$batch_run_id" ]; then
+            echo "RUN_ID was not emitted by ingest step" >&2
+            exit 1
+          fi
+          echo "BATCH_RUN_ID=$batch_run_id" >> "$GITHUB_ENV"
 
       - name: Normalize events
-        run: python -m bicycle_road_event_alarm.cli.normalize_events
+        run: python -m bicycle_road_event_alarm.cli.normalize_events --run-id "$BATCH_RUN_ID"
 
       - name: Generate and publish message
         run: |
           if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_fallback == 'true' }}" = "true" ]; then
-            python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback
+            python -m bicycle_road_event_alarm.cli.generate_messages --run-id "$BATCH_RUN_ID" --force-fallback
           else
-            python -m bicycle_road_event_alarm.cli.generate_messages
+            python -m bicycle_road_event_alarm.cli.generate_messages --run-id "$BATCH_RUN_ID"
           fi

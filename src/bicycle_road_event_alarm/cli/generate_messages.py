@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import uuid
 from typing import cast
 
 from dotenv import load_dotenv
@@ -26,12 +27,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--force-fallback",
         action="store_true",
-        help="OpenAI 호출 없이 fallback 메시지 생성기를 사용합니다.",
+        help="Skip OpenAI and use deterministic fallback message generation.",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=uuid.UUID,
+        default=None,
+        help="Generate a message only from normalized events collected by the given run_logs.id.",
     )
     return parser.parse_args(argv)
 
 
-# 실행 명령: publishable normalized_events를 읽어 알림 메시지를 생성합니다.
+# 실행 명령: publishable normalized_events를 읽어 알림 메시지를 생성하고 발송합니다.
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     load_dotenv(".env")
@@ -42,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     with session_factory() as session:
         run_log = start_run_log(session)
         session.flush()
-        events = load_publishable_message_events(session)
+        events = load_publishable_message_events(session, run_id=args.run_id)
 
         generator = None
         if not args.force_fallback and events and settings.openai_api_key is not None:

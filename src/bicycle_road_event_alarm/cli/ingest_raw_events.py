@@ -44,6 +44,7 @@ def main() -> int:
             session.commit()
             print("INGEST_STATUS=skipped")
             print(f"INGEST_REASON={reason}")
+            print(f"RUN_ID={run_log.id}")
             print(f"RAW_EVENTS_SAVED={saved_count}")
             return 0
 
@@ -56,6 +57,8 @@ def main() -> int:
         )
         session.commit()
 
+    print("INGEST_STATUS=success")
+    print(f"RUN_ID={run_log.id}")
     print(f"RAW_EVENTS_SAVED={saved_count}")
     return 0
 

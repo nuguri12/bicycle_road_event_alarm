@@ -1,5 +1,36 @@
 # Weekend Cycling Event Alert Service
 
+## Latest Operational Status (2026-07-01)
+
+- GitHub Actions workflow: `Manual Batch`
+- Current temporary schedule: `*/5 * * * *`
+  - Purpose: verify that GitHub creates `schedule` workflow runs reliably.
+  - After verification, restore production schedule to `0 22 * * 4`.
+  - `0 22 * * 4` means every Friday 07:00 KST because GitHub Actions cron uses UTC.
+- Scheduled runs force real publish mode:
+  - `ENABLE_TELEGRAM_PUBLISH=true`
+  - `DRY_RUN=false`
+- `ingest_raw_events` now prints `RUN_ID=<uuid>`.
+- GitHub Actions stores that value as `BATCH_RUN_ID` and passes it to:
+  - `normalize_events --run-id "$BATCH_RUN_ID"`
+  - `generate_messages --run-id "$BATCH_RUN_ID"`
+- Empty publishable events now generate a dated no-event message, for example:
+  - `2026-07-01 기준 이번 주말 자전거 주의 이벤트가 없습니다.`
+- `publish_attempts` now records non-empty message outcomes for `success`, `failed`, and `skipped`.
+- Empty message skips are still not recorded because they do not represent a publishable message.
+
+### GitHub Schedule Diagnosis
+
+The 2026-07-01 14:30 KST scheduled run did not appear in GitHub Actions. Local and remote checks confirmed:
+
+- Workflow state was `active`.
+- Default branch was `main`.
+- Remote `main` contained the expected workflow file.
+- The cron expression existed on remote `main`.
+- GitHub API returned zero `event=schedule` runs at the time of inspection.
+
+The most likely cause is GitHub Actions schedule delay/drop or first-tick registration timing after a recent workflow change. GitHub documents that scheduled workflows can be delayed under high load and queued jobs may be dropped. The current `*/5 * * * *` temporary schedule is intended to gather evidence before restoring the production Friday schedule.
+
 주말 자전거도로 이용자가 교통 통제, 대회, 축제, 공원 행사 같은 이동 방해 요소를 미리 확인할 수 있도록 공개 정보를 수집하고 알림으로 전달하는 배치 서비스입니다.
 
 ## 1. 서비스 개요

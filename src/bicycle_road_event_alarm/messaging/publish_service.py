@@ -17,7 +17,7 @@ from bicycle_road_event_alarm.messaging.telegram_publisher import (
 )
 
 
-# 단일 발송 처리: 성공 이력이 있는 메시지는 외부 호출 없이 중복 발송을 막습니다.
+# 단일 발송 처리: 빈 메시지는 무시하고, 그 외 성공/실패/스킵 결과는 DB에 남깁니다.
 def publish_message_once(
     session: Session,
     *,
@@ -36,20 +36,20 @@ def publish_message_once(
 
     message_hash = build_message_hash(message)
     if has_successful_publish(session, message_hash):
-        return TelegramPublishResult(
+        result = TelegramPublishResult(
             status="skipped",
             reason="duplicate_successful_publish",
             telegram_message_id=None,
         )
+    else:
+        result = publish_telegram_message(message, config=config, client=client)
 
-    result = publish_telegram_message(message, config=config, client=client)
-    if result.status in {"success", "failed"}:
-        record_publish_attempt(
-            session,
-            run_id=run_id,
-            normalized_event_id=normalized_event_id,
-            telegram_channel_id=config.channel_id or "",
-            message_hash=message_hash,
-            result=result,
-        )
+    record_publish_attempt(
+        session,
+        run_id=run_id,
+        normalized_event_id=normalized_event_id,
+        telegram_channel_id=config.channel_id or "",
+        message_hash=message_hash,
+        result=result,
+    )
     return result

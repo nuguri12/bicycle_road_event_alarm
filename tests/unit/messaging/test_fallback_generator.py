@@ -6,7 +6,7 @@ from bicycle_road_event_alarm.messaging.message_input import MessageEvent
 
 def make_message_event(
     *,
-    title: str = "한강 자전거도로 교통통제",
+    title: str = "잠실 자전거도로 교통통제",
     impact: str = "high",
     start: datetime = datetime(2026, 7, 4, 8, 0, tzinfo=UTC),
     source_url: str = "https://example.test/notice",
@@ -19,7 +19,7 @@ def make_message_event(
         region="서울",
         event_type="road_closure",
         cyclist_impact_level=impact,
-        cyclist_impact_reason="교통통제 또는 우회 관련 표현 감지",
+        cyclist_impact_reason="교통통제 또는 행사 관련 표현 감지",
         source_url=source_url,
     )
 
@@ -43,9 +43,12 @@ def test_generate_fallback_message_sorts_by_impact_then_datetime() -> None:
     assert "https://example.test/low" in result.text
 
 
-def test_generate_fallback_message_skips_empty_events() -> None:
-    result = generate_fallback_message([])
+def test_generate_fallback_message_includes_generated_date_for_empty_events() -> None:
+    result = generate_fallback_message(
+        [],
+        generated_at=datetime(2026, 7, 1, 14, 30, tzinfo=UTC),
+    )
 
     assert result.status == "generated"
-    assert result.text == "이번 주말 자전거 주의 이벤트가 없습니다."
+    assert result.text == "2026-07-01 기준 이번 주말 자전거 주의 이벤트가 없습니다."
     assert result.event_count == 0

@@ -22,15 +22,17 @@ class FailingTelegramClient:
         raise RuntimeError("telegram down")
 
 
-def test_publish_message_once_skips_when_successful_hash_already_exists() -> None:
+def test_publish_message_once_records_skipped_when_successful_hash_already_exists() -> None:
     session = Mock()
     session.scalar.return_value = uuid.uuid4()
     client = FakeTelegramClient(calls=[])
+    run_id = uuid.uuid4()
+    event_id = uuid.uuid4()
 
     result = publish_message_once(
         session,
-        run_id=uuid.uuid4(),
-        normalized_event_id=uuid.uuid4(),
+        run_id=run_id,
+        normalized_event_id=event_id,
         message="주의 구간 안내",
         config=TelegramPublishConfig(
             enabled=True,
@@ -44,7 +46,12 @@ def test_publish_message_once_skips_when_successful_hash_already_exists() -> Non
     assert result.status == "skipped"
     assert result.reason == "duplicate_successful_publish"
     assert client.calls == []
-    session.add.assert_not_called()
+    publish_attempt = session.add.call_args.args[0]
+    assert publish_attempt.run_id == run_id
+    assert publish_attempt.normalized_event_id == event_id
+    assert publish_attempt.telegram_channel_id == "@cycling_alerts"
+    assert publish_attempt.status == "skipped"
+    assert publish_attempt.failure_reason == "duplicate_successful_publish"
 
 
 def test_publish_message_once_records_attempt_when_message_is_new() -> None:
@@ -102,14 +109,15 @@ def test_publish_message_once_skips_empty_message_without_recording_attempt() ->
     session.add.assert_not_called()
 
 
-def test_publish_message_once_does_not_record_dry_run_attempt() -> None:
+def test_publish_message_once_records_dry_run_attempt() -> None:
     session = Mock()
     session.scalar.return_value = None
     client = FakeTelegramClient(calls=[])
+    run_id = uuid.uuid4()
 
     result = publish_message_once(
         session,
-        run_id=uuid.uuid4(),
+        run_id=run_id,
         normalized_event_id=None,
         message="주의 구간 안내",
         config=TelegramPublishConfig(
@@ -124,7 +132,12 @@ def test_publish_message_once_does_not_record_dry_run_attempt() -> None:
     assert result.status == "skipped"
     assert result.reason == "dry_run"
     assert client.calls == []
-    session.add.assert_not_called()
+    publish_attempt = session.add.call_args.args[0]
+    assert publish_attempt.run_id == run_id
+    assert publish_attempt.normalized_event_id is None
+    assert publish_attempt.telegram_channel_id == "@cycling_alerts"
+    assert publish_attempt.status == "skipped"
+    assert publish_attempt.failure_reason == "dry_run"
 
 
 def test_publish_message_once_records_failed_send_attempt() -> None:

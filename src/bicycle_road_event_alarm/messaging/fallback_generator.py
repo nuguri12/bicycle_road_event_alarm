@@ -1,15 +1,24 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
+
 from bicycle_road_event_alarm.messaging.message_input import GeneratedMessage, MessageEvent
 
 IMPACT_ORDER = {"high": 0, "medium": 1, "low": 2}
+KST = ZoneInfo("Asia/Seoul")
 
 
 # fallback 메시지 생성: OpenAI 없이도 발송 가능한 결정론적 한국어 알림을 만듭니다.
-def generate_fallback_message(events: list[MessageEvent]) -> GeneratedMessage:
+def generate_fallback_message(
+    events: list[MessageEvent],
+    *,
+    generated_at: datetime | None = None,
+) -> GeneratedMessage:
     if not events:
+        기준일 = _format_generated_date(generated_at)
         return GeneratedMessage(
-            text="이번 주말 자전거 주의 이벤트가 없습니다.",
+            text=f"{기준일} 기준 이번 주말 자전거 주의 이벤트가 없습니다.",
             source="fallback",
             status="generated",
             event_count=0,
@@ -37,7 +46,15 @@ def generate_fallback_message(events: list[MessageEvent]) -> GeneratedMessage:
     )
 
 
-# 이벤트 출력: 각 이벤트를 짧은 블록으로 정리해 15초 안에 읽기 쉽게 만듭니다.
+# 기준일 표시: GitHub runner가 UTC여도 운영자가 보는 한국 날짜로 기록합니다.
+def _format_generated_date(generated_at: datetime | None) -> str:
+    기준시각 = generated_at or datetime.now(UTC)
+    if 기준시각.tzinfo is None:
+        기준시각 = 기준시각.replace(tzinfo=UTC)
+    return 기준시각.astimezone(KST).date().isoformat()
+
+
+# 이벤트 출력: 각 이벤트를 지정된 블록으로 정리해 15초 안에 읽기 쉽게 만듭니다.
 def _event_lines(index: int, event: MessageEvent) -> list[str]:
     time_text = _format_time_range(event)
     reason = event.cyclist_impact_reason or "자전거 이동 영향 가능성이 있습니다."

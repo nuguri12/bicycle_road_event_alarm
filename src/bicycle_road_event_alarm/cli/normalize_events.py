@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import argparse
+import uuid
+
 from dotenv import load_dotenv
 from sqlalchemy import select
 
@@ -9,15 +12,30 @@ from bicycle_road_event_alarm.db.models import RawEvent
 from bicycle_road_event_alarm.normalization.repository import save_normalized_events
 
 
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--run-id",
+        type=uuid.UUID,
+        default=None,
+        help="Normalize only raw_events created by the given run_logs.id.",
+    )
+    return parser.parse_args(argv)
+
+
 # 실행 명령: 저장된 raw_events를 읽어 normalized_events로 변환합니다.
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     load_dotenv(".env")
     settings = load_settings()
     engine = create_engine_from_settings(settings)
     session_factory = create_session_factory(engine)
 
     with session_factory() as session:
-        raw_events = list(session.scalars(select(RawEvent)).all())
+        statement = select(RawEvent)
+        if args.run_id is not None:
+            statement = statement.where(RawEvent.run_id == args.run_id)
+        raw_events = list(session.scalars(statement).all())
         saved_count = save_normalized_events(session, raw_events)
         session.commit()
 

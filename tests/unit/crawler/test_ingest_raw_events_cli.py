@@ -86,6 +86,7 @@ def test_ingest_raw_events_cli_treats_source_timeout_as_empty_ingestion(
     captured = capsys.readouterr()
     assert "INGEST_STATUS=skipped" in captured.out
     assert "INGEST_REASON=source_unavailable" in captured.out
+    assert f"RUN_ID={run_log.id}" in captured.out
     assert "RAW_EVENTS_SAVED=0" in captured.out
     assert finished_calls == [
         {

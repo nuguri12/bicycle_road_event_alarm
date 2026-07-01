@@ -1,5 +1,30 @@
 # Codex Handoff Current Status
 
+## Latest Update: 2026-07-01 Schedule Verification
+
+- Workflow: `.github/workflows/manual-batch.yml`
+- Temporary cron: `*/5 * * * *`
+- Production cron to restore after verification: `0 22 * * 4`
+  - This runs every Friday 07:00 KST because GitHub Actions cron uses UTC.
+- GitHub schedule non-run diagnosis:
+  - Remote workflow state was `active`.
+  - Repository default branch was `main`.
+  - Remote `main` matched local `3bbdbe5` before this update.
+  - Remote workflow contained the 14:30 KST cron.
+  - GitHub API returned zero `event=schedule` runs at inspection time.
+  - Most likely cause: GitHub schedule delay/drop or first scheduled tick not registered after a recent workflow change.
+- Runtime changes made after that diagnosis:
+  - `ingest_raw_events` prints `RUN_ID=<uuid>`.
+  - GitHub Actions captures `RUN_ID` into `BATCH_RUN_ID`.
+  - `normalize_events --run-id "$BATCH_RUN_ID"` scopes normalization to the current ingest run.
+  - `generate_messages --run-id "$BATCH_RUN_ID"` scopes message candidates to the current ingest run.
+  - Empty publishable events produce a dated no-event message.
+  - `publish_attempts` records `success`, `failed`, and non-empty `skipped` outcomes.
+- Operator check after push:
+  - Wait 5-15 minutes and check Actions for a `schedule` event.
+  - Check logs for `RUN_ID=`, `BATCH_RUN_ID`, `MESSAGE_STATUS`, `TELEGRAM_STATUS`.
+  - Check Supabase `publish_attempts` for the latest `skipped`, `failed`, or `success` row.
+
 Last updated: 2026-06-30
 
 ## Purpose

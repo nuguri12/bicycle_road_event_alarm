@@ -1,5 +1,50 @@
 # Operation Manual
 
+## Latest Operator Runbook: GitHub Schedule Verification
+
+Current temporary verification schedule:
+
+- Workflow: `Manual Batch`
+- Cron: `*/5 * * * *`
+- Expected trigger type: `schedule`
+- Expected branch: `main`
+
+What to check in GitHub Actions:
+
+1. Open repository `Actions`.
+2. Select `Manual Batch`.
+3. Confirm a new run appears with event type `schedule`.
+4. Open the latest run and check the `Generate and publish message` step.
+5. Expected log keys:
+   - `MESSAGE_STATUS=generated`
+   - `MESSAGE_SOURCE=openai` or `MESSAGE_SOURCE=fallback`
+   - `MESSAGE_EVENT_COUNT=<number>`
+   - `TELEGRAM_STATUS=success`, `failed`, or `skipped`
+
+What to check in Supabase:
+
+```sql
+select id, status, started_at, finished_at, raw_event_count, normalized_event_count, published_message_count, error_summary
+from run_logs
+order by started_at desc
+limit 10;
+```
+
+```sql
+select run_id, status, failure_reason, attempted_at, telegram_channel_id
+from publish_attempts
+order by attempted_at desc
+limit 10;
+```
+
+After schedule creation is verified, restore the production cron in `.github/workflows/manual-batch.yml`:
+
+```yaml
+cron: "0 22 * * 4"
+```
+
+This runs every Friday 07:00 KST.
+
 ## 1. 운영 목표
 
 운영자는 정기 실행이 성공했는지, 메시지가 발행되었는지, 실패 시 무엇을 확인해야 하는지 빠르게 알 수 있어야 합니다.

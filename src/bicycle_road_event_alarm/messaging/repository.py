@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
@@ -8,17 +10,24 @@ from bicycle_road_event_alarm.messaging.message_input import MessageEvent, messa
 
 
 # 발송 후보 조회: 유효하고 publish_candidate인 normalized_events만 메시지 입력으로 변환합니다.
-def load_publishable_message_events(session: Session) -> list[MessageEvent]:
-    rows = session.execute(_publishable_events_statement()).all()
+def load_publishable_message_events(
+    session: Session,
+    *,
+    run_id: uuid.UUID | None = None,
+) -> list[MessageEvent]:
+    rows = session.execute(_publishable_events_statement(run_id=run_id)).all()
     return [
         message_event_from_model(normalized_event, source_url=source_url)
         for normalized_event, source_url in rows
     ]
 
 
-# 조회문 구성: Telegram 발송 중복 제외는 Sprint 6 publish_attempts 구현에서 추가합니다.
-def _publishable_events_statement() -> Select[tuple[NormalizedEvent, str]]:
-    return (
+# 조회문 구성: run_id가 있으면 현재 배치에서 수집한 원문 이벤트만 메시지 후보로 사용합니다.
+def _publishable_events_statement(
+    *,
+    run_id: uuid.UUID | None = None,
+) -> Select[tuple[NormalizedEvent, str]]:
+    statement = (
         select(NormalizedEvent, RawEvent.source_url)
         .join(RawEvent, RawEvent.id == NormalizedEvent.raw_event_id)
         .where(NormalizedEvent.publish_candidate.is_(True))
@@ -26,3 +35,6 @@ def _publishable_events_statement() -> Select[tuple[NormalizedEvent, str]]:
         .where(NormalizedEvent.cyclist_impact_level.in_(("low", "medium", "high")))
         .order_by(NormalizedEvent.start_datetime.asc())
     )
+    if run_id is not None:
+        statement = statement.where(RawEvent.run_id == run_id)
+    return statement
