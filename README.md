@@ -127,6 +127,12 @@ DB/CLI 검증용 publishable 더미 이벤트 생성:
 python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
 ```
 
+GitHub Actions 수동 배치:
+
+- Actions 탭에서 `Manual Batch` workflow를 수동 실행합니다.
+- 기본값은 `dry_run=true`, `enable_telegram_publish=false`라 실제 Telegram 발송을 하지 않습니다.
+- 실제 발송 검증 시에만 `dry_run=false`, `enable_telegram_publish=true`로 바꿉니다.
+
 ## 4. 기타
 
 ### 현재 구현 상태
@@ -143,6 +149,9 @@ python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
 - 랜덤 publishable fixture seed CLI 완료
 - `generate_messages --force-fallback` fallback 검증 옵션 완료
 - Private Telegram 채널 실제 발송 및 중복 발송 방지 검증 완료
+- OpenAI 메시지 생성 CLI 검증 완료
+- `publish_attempts` 성공 기록 및 중복 발송 방지 완료
+- GitHub Actions 수동 배치 workflow 완료
 
 자세한 이어받기 문서는 `docs/handoff-current-status.md`를 참고하세요.
 
@@ -160,11 +169,17 @@ ENABLE_TELEGRAM_PUBLISH=false
 DRY_RUN=true
 ```
 
+GitHub Secrets에 필요한 값:
+
+- `SUPABASE_DATABASE_URL`
+- `OPENAI_API_KEY`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHANNEL_ID`
+
 ### 남은 주요 작업
 
-- `publish_attempts` 저장 및 `message_hash` 기반 중복 발송 방지
-- GitHub Actions 스케줄러
-- OpenAI API quota/billing 설정 확인
-- 테스트 fixture 데이터 정리 정책 결정
+- GitHub Actions manual dispatch 검증
+- GitHub Secrets 설정
+- GitHub Actions 정기 스케줄 활성화
 - Sprint 8: 통합 테스트와 live test marker
 - Sprint 9: 운영 문서, 모니터링, 릴리즈 체크리스트 보강

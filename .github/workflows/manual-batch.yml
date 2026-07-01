@@ -1,0 +1,89 @@
+name: Manual Batch
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Keep external publish disabled"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      enable_telegram_publish:
+        description: "Allow Telegram publishing when dry_run is false"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      force_fallback:
+        description: "Skip OpenAI and use deterministic fallback message generation"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  validate-and-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      APP_ENV: production
+      LOG_LEVEL: INFO
+      SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+      ENABLE_TELEGRAM_PUBLISH: ${{ inputs.enable_telegram_publish }}
+      DRY_RUN: ${{ inputs.dry_run }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install package and dev dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Run Ruff
+        run: python -m ruff check .
+
+      - name: Run Mypy
+        run: python -m mypy src tests
+
+      - name: Check formatting
+        run: python -m black --check .
+
+      - name: Compile sources
+        run: python -m compileall src
+
+      - name: Apply database migrations
+        run: python -m alembic upgrade head
+
+      - name: Ingest raw events
+        run: python -m bicycle_road_event_alarm.cli.ingest_raw_events
+
+      - name: Normalize events
+        run: python -m bicycle_road_event_alarm.cli.normalize_events
+
+      - name: Generate and publish message
+        run: |
+          if [ "${{ inputs.force_fallback }}" = "true" ]; then
+            python -m bicycle_road_event_alarm.cli.generate_messages --force-fallback
+          else
+            python -m bicycle_road_event_alarm.cli.generate_messages
+          fi

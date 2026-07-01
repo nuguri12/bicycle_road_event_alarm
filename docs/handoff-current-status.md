@@ -11,7 +11,7 @@ This document is a handoff note for another local Codex session. It summarizes w
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: user approved direct development on `main`
-- Latest implementation commit covered by this handoff: `2b718a9 feat: add telegram publisher`
+- Latest implementation area covered by this handoff: Telegram publishing, OpenAI message generation, fixture verification, and manual GitHub Actions batch
 - Current local working tree at last check: clean
 
 ## Project Goal
@@ -294,8 +294,9 @@ Additional live verification after fixture support:
   - `TELEGRAM_STATUS=skipped`
   - `TELEGRAM_REASON=telegram_publish_disabled`
 - OpenAI API path was attempted with the seeded event
-  - API returned `insufficient_quota`
-  - Runtime correctly fell back to deterministic fallback
+  - Initial API attempt returned `insufficient_quota`
+  - After billing was corrected, `MESSAGE_SOURCE=openai` was verified through the real CLI
+  - Runtime fallback behavior was also verified when OpenAI failed
 - Telegram real-send path was attempted with one fallback message
   - sanitized runtime output: `TELEGRAM_STATUS=failed`, `TELEGRAM_REASON=telegram_send_failed`
   - direct sanitized diagnostic returned `Bad Request: chat not found`
@@ -321,6 +322,11 @@ Follow-up Telegram verification:
   - `TELEGRAM_STATUS=skipped`
   - `TELEGRAM_REASON=duplicate_successful_publish`
 - A CLI bug was found and fixed: `run_logs` must be flushed before recording `publish_attempts`, otherwise successful Telegram sends can fail during DB commit with a foreign-key error.
+- The local-fixture DB rows were later removed:
+  - `LOCAL_FIXTURE_RAW_COUNT=0`
+  - `LOCAL_FIXTURE_NORMALIZED_COUNT=0`
+  - `LOCAL_FIXTURE_PUBLISHABLE_COUNT=0`
+  - `TOTAL_PUBLISHABLE_COUNT=0`
 
 ## Current Commands
 
@@ -399,22 +405,28 @@ Latest verified baseline before this handoff doc:
 - Current SPATIC parser is intentionally simple and fixture-driven.
 - If SPATIC HTML changes, update fixture first, then parser.
 - Current normalization is deterministic/rule-based only.
-- OpenAI wrapper is implemented and the live API call was attempted; the current OpenAI account returned `insufficient_quota`, so fallback behavior was verified.
+- OpenAI wrapper is implemented and the real CLI has accepted an OpenAI-generated message.
 - Telegram publisher is implemented and connected to CLI; real publishing succeeded after using private channel id `-1004448224539`.
 - GitHub Actions scheduler is not yet implemented.
+- GitHub Actions manual batch workflow is implemented, but has not yet been run from GitHub.
 
 ## Remaining Work
 
-### Next Recommended Task: Persist Environment Settings And Prepare Scheduler
+### Next Recommended Task: Configure GitHub Secrets And Run Manual Batch
 
-Persist the verified Telegram channel id in local/GitHub environments, then prepare scheduler deployment.
+Configure repository secrets and run the manual GitHub Actions batch once with safe defaults.
 
 Recommended scope:
 
-- Update local `.env` `TELEGRAM_CHANNEL_ID` to `-1004448224539`
 - Add/update GitHub Secrets for Telegram/OpenAI/Supabase
-- Decide whether to keep or delete local-fixture DB rows before production schedule
-- Implement GitHub Actions workflow with manual dispatch first
+- Run `Manual Batch` with default safe inputs:
+  - `dry_run=true`
+  - `enable_telegram_publish=false`
+  - `force_fallback=false`
+- Review workflow logs for secret masking, DB migration, ingestion, normalization, and message generation
+- Only after manual dry-run passes, run a controlled publish with:
+  - `dry_run=false`
+  - `enable_telegram_publish=true`
 - Keep scheduled production publish disabled until manual dispatch is verified
 
 Suggested files:
@@ -429,8 +441,7 @@ Implement CI/scheduled execution.
 
 Recommended scope:
 
-- GitHub Actions workflow
-- Saturday 06:00 KST schedule
+- Saturday 06:00 KST schedule after manual batch succeeds
 - manual dispatch
 - GitHub Secrets mapping
 - default tests without live external calls
@@ -449,11 +460,11 @@ Recommended scope:
 
 - SPATIC live page returned no new raw events during the latest run.
 - Parser may need adjustment when real SPATIC table rows are available.
-- OpenAI live call currently fails with `insufficient_quota`.
+- OpenAI live call succeeded after billing/quota was corrected.
 - Real Telegram API publish succeeded when using the discovered private channel id.
-- Local `.env` was not modified by Codex; update `TELEGRAM_CHANNEL_ID=-1004448224539` before future runs without a temporary override.
-- A local-fixture publishable event now exists in Supabase unless manually deleted later.
+- Local-fixture publishable rows were deleted from Supabase after Telegram verification.
 - `publish_attempts` records successful real sends only; dry-run/skipped/failed states are CLI output only for now.
+- Manual GitHub Actions workflow exists, but repository secrets and GitHub-side run are not verified yet.
 - Some older Korean docs display mojibake in PowerShell output, but repo files should be handled carefully and not rewritten unless needed.
 - `created_at_column()` in existing DB models still uses `datetime.utcnow`; current tests pass, but a future cleanup can replace this with timezone-aware UTC if desired.
 - Normalization rules are MVP heuristics, not AI-assisted yet.
@@ -467,9 +478,8 @@ Later, before real Telegram publishing:
 - Confirm Telegram channel ID
 - Confirm bot is channel admin
 - Rotate the Telegram bot token because an earlier local traceback printed it in a URL
-- Resolve OpenAI API billing/quota before expecting OpenAI-generated messages
 - Confirm publishable fixture or live event exists for end-to-end message generation
-- Set local `.env` and GitHub Secrets `TELEGRAM_CHANNEL_ID` to `-1004448224539`
+- Set GitHub Secrets `TELEGRAM_CHANNEL_ID` to `-1004448224539`
 - Decide when to switch:
   - `DRY_RUN=false`
   - `ENABLE_TELEGRAM_PUBLISH=true`
