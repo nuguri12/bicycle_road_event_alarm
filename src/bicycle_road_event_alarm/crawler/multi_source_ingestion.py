@@ -18,7 +18,7 @@ from bicycle_road_event_alarm.crawler.raw_event import RawEventCandidate
 
 
 class TextHttpClient(Protocol):
-    def get_text(self, url: str) -> str: ...
+    def get_text(self, url: str, *, timeout_seconds: int | None = None) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,7 @@ class SourceDefinition:
     name: str
     url: str
     parser: Callable[[str], list[RawEventCandidate]]
+    timeout_seconds: int | None = None
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,7 @@ DEFAULT_SOURCES = (
         name="ara_waterway_notices",
         url=ARA_WATERWAY_NOTICES_URL,
         parser=parse_ara_waterway_notices_page,
+        timeout_seconds=10,
     ),
 )
 
@@ -68,7 +70,7 @@ def fetch_all_source_candidates(
 
     for source in sources:
         try:
-            html = http_client.get_text(source.url)
+            html = http_client.get_text(source.url, timeout_seconds=source.timeout_seconds)
             candidates.extend(source.parser(html))
         except Exception as exc:
             failures[source.name] = str(exc)

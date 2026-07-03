@@ -67,3 +67,15 @@ def test_generate_fallback_message_distinguishes_source_outage_from_no_event() -
     assert "수집 소스" in result.text
     assert "이벤트가 없습니다" not in result.text
     assert result.event_count == 0
+
+
+def test_generate_fallback_message_keeps_partial_outage_quiet_for_users() -> None:
+    result = generate_fallback_message(
+        [],
+        generated_at=datetime(2026, 7, 1, 14, 30, tzinfo=UTC),
+        empty_reason="partial_source_unavailable",
+    )
+
+    assert result.status == "generated"
+    assert result.text == "2026-07-01 기준 이번 주말 자전거 주의 이벤트가 없습니다."
+    assert result.event_count == 0

@@ -39,13 +39,14 @@ class HttpClient:
         self._retry_sleep_seconds = retry_sleep_seconds
         self._headers = {"User-Agent": user_agent}
 
-    def get_text(self, url: str) -> str:
+    def get_text(self, url: str, *, timeout_seconds: int | None = None) -> str:
         last_response: HttpResponse | None = None
+        timeout = self._timeout_seconds if timeout_seconds is None else timeout_seconds
 
         for attempt_index in range(self._max_retries + 1):
             response = self._session.get(
                 url,
-                timeout=self._timeout_seconds,
+                timeout=timeout,
                 headers=self._headers,
             )
             last_response = response

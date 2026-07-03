@@ -9,10 +9,10 @@ from bicycle_road_event_alarm.crawler.raw_event import RawEventCandidate
 
 class FakeHttpClient:
     def __init__(self) -> None:
-        self.calls: list[str] = []
+        self.calls: list[tuple[str, int | None]] = []
 
-    def get_text(self, url: str) -> str:
-        self.calls.append(url)
+    def get_text(self, url: str, *, timeout_seconds: int | None = None) -> str:
+        self.calls.append((url, timeout_seconds))
         if url == "https://example.test/failing":
             raise requests.exceptions.ConnectTimeout("timeout")
         return f"<html>{url}</html>"
@@ -25,6 +25,7 @@ def test_fetch_all_source_candidates_keeps_successful_sources_after_one_failure(
             name="failing",
             url="https://example.test/failing",
             parser=lambda _html: [],
+            timeout_seconds=5,
         ),
         SourceDefinition(
             name="working",
@@ -47,7 +48,10 @@ def test_fetch_all_source_candidates_keeps_successful_sources_after_one_failure(
     assert len(result.candidates) == 1
     assert result.failures == {"failing": "timeout"}
     assert result.all_sources_failed is False
-    assert http_client.calls == ["https://example.test/failing", "https://example.test/working"]
+    assert http_client.calls == [
+        ("https://example.test/failing", 5),
+        ("https://example.test/working", None),
+    ]
 
 
 def test_fetch_all_source_candidates_marks_all_failed_only_when_every_source_fails() -> None:
