@@ -8,17 +8,17 @@ Operate and verify the Weekend Cycling Event Alert Service as a scheduled GitHub
 
 ## Active Task
 
-Run the temporary push-based production smoke, then remove the push trigger and restore the normal weekly production cron.
+Monitor the restored weekly production schedule after a successful push-based Telegram smoke.
 
 ## Current Runtime State
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`
-- Previous pushed commit before this smoke update: `512b410 project memory update`
+- Latest verified smoke run: GitHub Actions run `28660665074` on commit `2a0c825`
 - Workflow: `.github/workflows/manual-batch.yml`
-- Temporary schedule: `cron: "20 12 3 7 *"`
-- Meaning: 2026-07-03 12:20 UTC, which is 2026-07-03 21:20 KST
-- Temporary push smoke trigger: changes to `project-memory/SMOKE_TRIGGER.md`
+- Production schedule: `cron: "0 22 * * 4"`
+- Meaning: every Friday 07:00 KST
+- Temporary push smoke trigger has been removed after successful verification.
 - Scheduled runs force real publish mode:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
@@ -38,23 +38,24 @@ Run the temporary push-based production smoke, then remove the push trigger and 
 - Partial source outage is recorded in DB and CLI, but user-facing no-event text stays quiet.
 - Empty fallback messages include KST send date and time.
 - Telegram publish attempts are recorded for success, failed, and non-empty skipped outcomes.
+- Production-mode Telegram publish failures return a non-zero CLI exit code so GitHub Actions fails visibly.
 - Duplicate successful publish prevention is active.
 
 ## Known Current Observations
 
 - The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
+- The push-based production smoke succeeded at 2026-07-03 21:31 KST with `TELEGRAM_STATUS=success` and `TELEGRAM_MESSAGE_ID=11`.
 - Ara Waterway often times out from GitHub Actions runners.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid same-day duplicate hash collisions, but that also weakens dedupe for repeated no-event scheduled runs.
 
 ## Next Actions
 
-1. Push the temporary smoke trigger commit and check GitHub Actions for a `push` event run.
-2. Confirm Telegram received the production smoke message.
+1. Monitor the next normal `schedule` event run.
+2. Confirm Telegram receives the scheduled production message.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_CONTEXT=<...>`
    - `TELEGRAM_STATUS=success` or a clear failure reason
-4. Remove the temporary push trigger and restore production cron to `0 22 * * 4` after the smoke result is known.
-5. Update this project memory after restoring the cron.
+4. If no `schedule` event run appears at the production time, treat GitHub schedule triggering as the remaining operational issue.

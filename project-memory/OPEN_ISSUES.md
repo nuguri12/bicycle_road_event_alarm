@@ -4,33 +4,17 @@ Last updated: 2026-07-03
 
 ## Must Resolve Soon
 
-### Restore production cron after temporary smoke
-
-- Current temporary cron: `20 12 3 7 *`
-- Current temporary push smoke trigger: `project-memory/SMOKE_TRIGGER.md`
-- Intended production cron: `0 22 * * 4`
-- Production meaning: every Friday 07:00 KST
-- Remove the push trigger and restore after the push-based smoke result is known.
-
 ### Verify scheduled production Telegram publish
 
-- Manual runs have been mostly dry-run or skipped by duplicate publish protection.
+- Production-mode Telegram publishing was verified through push-based smoke run `28660665074`.
+- The workflow is restored to production cron `0 22 * * 4`.
 - The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
-- Need one scheduled `event=schedule` run with:
+- Need the next normal scheduled `event=schedule` run with:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
   - clear `TELEGRAM_STATUS`
 - Check both GitHub Actions logs and Telegram channel.
-
-### Verify push-based production smoke
-
-- A temporary push trigger is being used because repeated one-off schedules did not create runs.
-- The push event should run with:
-  - `ENABLE_TELEGRAM_PUBLISH=true`
-  - `DRY_RUN=false`
-  - clear `TELEGRAM_STATUS`
-- Remove this temporary trigger immediately after the smoke result is known.
 
 ## Operational Risks
 

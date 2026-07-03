@@ -30,6 +30,13 @@ Last updated: 2026-07-03
 - Alternatives considered: Wait longer for GitHub schedule; use Chrome UI automation for workflow_dispatch; local production smoke with `.env`.
 - Impact: The next push should run `Manual Batch` as a `push` event with real Telegram publish mode. Remove this temporary trigger after the result is known.
 
+## 2026-07-03: Push-based smoke verified Telegram publishing
+
+- Decision: Remove the temporary push smoke trigger and restore production cron `0 22 * * 4`.
+- Reason: Push run `28660665074` completed successfully with `TELEGRAM_STATUS=success` and `TELEGRAM_MESSAGE_ID=11`.
+- Alternatives considered: Keep the push trigger for future smoke runs; add a dedicated smoke workflow.
+- Impact: Future automatic runs depend on the weekly production schedule, while Telegram publish failures now fail the workflow visibly.
+
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 
 - Decision: Retry the production smoke at 19:00 KST with more lead time before the scheduled minute.
