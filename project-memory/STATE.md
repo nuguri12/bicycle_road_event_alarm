@@ -8,16 +8,16 @@ Operate and verify the Weekend Cycling Event Alert Service as a scheduled GitHub
 
 ## Active Task
 
-Wait for the temporary production smoke scheduled for 2026-07-03 17:30 KST, then restore the normal weekly production cron.
+Wait for the temporary production smoke scheduled for 2026-07-03 19:00 KST, then restore the normal weekly production cron.
 
 ## Current Runtime State
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`
-- Latest pushed commit at the time of this memory update: `0d9d800 chore: schedule temporary production smoke`
+- Previous pushed commit before this smoke update: `512b410 project memory update`
 - Workflow: `.github/workflows/manual-batch.yml`
-- Temporary schedule: `cron: "30 8 3 7 *"`
-- Meaning: 2026-07-03 08:30 UTC, which is 2026-07-03 17:30 KST
+- Temporary schedule: `cron: "0 10 3 7 *"`
+- Meaning: 2026-07-03 10:00 UTC, which is 2026-07-03 19:00 KST
 - Scheduled runs force real publish mode:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
@@ -47,7 +47,7 @@ Wait for the temporary production smoke scheduled for 2026-07-03 17:30 KST, then
 
 ## Next Actions
 
-1. After 2026-07-03 17:30 KST, check GitHub Actions for a `schedule` event run.
+1. After 2026-07-03 19:00 KST, check GitHub Actions for a `schedule` event run.
 2. Confirm Telegram received the production smoke message.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`

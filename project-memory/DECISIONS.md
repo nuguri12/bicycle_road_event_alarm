@@ -11,10 +11,17 @@ Last updated: 2026-07-03
 
 ## 2026-07-03: Temporary production smoke schedule
 
-- Decision: Temporarily set GitHub Actions cron to `30 8 3 7 *` for a 2026-07-03 17:30 KST production-mode smoke.
+- Decision: Temporarily set GitHub Actions cron to `0 10 3 7 *` for a 2026-07-03 19:00 KST production-mode smoke.
 - Reason: Manual dispatch used dry-run settings and could not verify real scheduled Telegram publishing.
 - Alternatives considered: Manual workflow with real publish inputs; deleting DB dedupe records; adding a dedicated smoke message option.
 - Impact: Must restore normal production cron after the smoke result is known.
+
+## 2026-07-03: 17:30 KST smoke did not create a schedule run
+
+- Decision: Retry the production smoke at 19:00 KST with more lead time before the scheduled minute.
+- Reason: The previous attempt had a new `main` commit at 17:29:25 KST, about 35 seconds before the 17:30 KST cron minute. GitHub Actions scheduled workflows are not precise real-time timers and can be delayed or dropped.
+- Alternatives considered: Use manual dispatch for real publish; use a temporary repeating cron.
+- Impact: If 19:00 also does not produce an `event=schedule` run, treat GitHub schedule reliability as the issue and avoid one-off cron smoke tests.
 
 ## 2026-07-03: Keep auxiliary source outages quiet in user messages
 
