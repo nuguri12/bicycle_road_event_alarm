@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
 
 ## Purpose
 
@@ -11,7 +11,7 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest pushed commit at the time of this handoff: `4f2a9ee fix: improve scheduled batch observability`
+- Latest pushed commit before the cron failure fix: `ae6fa78 docs: add remaining risk opinion`
 - Current local working tree should be clean after the latest push, unless the next session has made changes
 
 ## Project Goal
@@ -28,18 +28,6 @@ The MVP source is SPATIC. Additional sources should favor bicycle-relevant data 
 
 - Workflow file: `.github/workflows/manual-batch.yml`
 - Workflow name: `Manual Batch`
-- Current temporary schedule:
-
-```yaml
-cron: "*/5 * * * *"
-```
-
-Purpose:
-
-- This is a temporary smoke test to confirm that GitHub creates `schedule` workflow runs.
-
-Production schedule to restore after verification:
-
 ```yaml
 cron: "0 22 * * 4"
 ```
@@ -64,9 +52,9 @@ enable_telegram_publish=false
 force_fallback=false
 ```
 
-### Schedule Non-Run Diagnosis
+### Schedule Failure Diagnosis
 
-The 2026-07-01 14:30 KST scheduled run did not appear in GitHub Actions.
+The initial 2026-07-01 14:30 KST scheduled run did not appear in GitHub Actions, so a temporary `*/5 * * * *` smoke schedule was used.
 
 Checked evidence:
 
@@ -74,23 +62,30 @@ Checked evidence:
 - Repository default branch was `main`.
 - Remote `main` contained the expected workflow file.
 - Remote workflow contained the expected cron expression.
-- GitHub API returned zero `event=schedule` runs at inspection time.
+- Later GitHub API checks confirmed schedule runs were being created.
 
-Most likely cause:
+Final root cause of the red scheduled runs:
 
-- GitHub Actions schedule delay/drop, or first scheduled tick not registered after a recent workflow change.
+- Scheduled runs failed at the `Apply database migrations` step.
+- Alembic ran migration `0001_initial_schema -> 0002_publish_attempt_success_index`.
+- The database migration itself reached Alembic bookkeeping.
+- Updating `alembic_version.version_num` failed because the revision ID was 34 characters.
+- Alembic's default `version_num` column is `varchar(32)`.
 
-GitHub documentation notes:
+Observed error:
 
-- Scheduled workflows can be delayed during high load.
-- Some queued jobs may be dropped if load is high enough.
-- Scheduled workflows only run on the default branch.
-- The shortest supported interval is once every 5 minutes.
+```text
+psycopg.errors.StringDataRightTruncation: value too long for type character varying(32)
+[SQL: UPDATE alembic_version SET version_num='0002_publish_attempt_success_index' ...]
+```
 
-Current mitigation:
+Fix applied locally:
 
-- The workflow now uses `*/5 * * * *` temporarily.
-- After at least one `event=schedule` run appears and is reviewed, restore the production cron.
+- Added a migration test that enforces revision IDs are at most 32 characters.
+- Renamed the second migration revision to `0002_publish_success_idx`.
+- Verified `python -m alembic heads` reports `0002_publish_success_idx (head)`.
+- Verified `python -m alembic upgrade head` succeeds against Supabase.
+- Restored production cron to `0 22 * * 4`.
 
 ## Runtime Flow
 
@@ -309,11 +304,11 @@ Remote verification after push:
 
 ## Operator Checks
 
-After the latest push, check GitHub Actions:
+After the cron failure fix is pushed, check GitHub Actions:
 
 1. Open the repository Actions tab.
 2. Select `Manual Batch`.
-3. Wait for a run with event type `schedule`.
+3. Wait for the next Friday 07:00 KST scheduled run, or run `workflow_dispatch` manually to verify the same batch path.
 4. Open the run logs.
 5. Confirm:
    - `RUN_ID=<uuid>`
@@ -338,12 +333,6 @@ order by attempted_at desc
 limit 10;
 ```
 
-If a schedule run appears and behaves as expected, restore production cron:
-
-```yaml
-cron: "0 22 * * 4"
-```
-
 ## Known Risks
 
 - GitHub Actions schedule is not a strict real-time scheduler.
@@ -356,11 +345,10 @@ cron: "0 22 * * 4"
 
 ## Recommended Next Tasks
 
-1. Monitor the temporary `*/5 * * * *` schedule.
-2. If a schedule run appears, inspect logs and Supabase rows.
-3. Restore production cron to `0 22 * * 4`.
-4. Add the next source with better bicycle relevance:
+1. Push the cron failure fix if not already pushed.
+2. Run `workflow_dispatch` once to confirm migration no longer fails in GitHub Actions.
+3. Add the next source with better bicycle relevance:
    - Recommended first: Hangang park events.
    - Recommended second: Hangang park notices.
-5. Improve source outage vs true no-event messaging.
-6. Consider recording a clearer run-level publish summary in `run_logs`.
+4. Improve source outage vs true no-event messaging.
+5. Consider recording a clearer run-level publish summary in `run_logs`.

@@ -10,8 +10,8 @@ def test_manual_batch_workflow_exists_with_safe_defaults() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "schedule:" in workflow
-    assert 'cron: "*/5 * * * *"' in workflow
-    assert 'Restore production schedule to "0 22 * * 4"' in workflow
+    assert 'cron: "0 22 * * 4"' in workflow
+    assert "Every Friday 07:00 KST" in workflow
     assert "dry_run:" in workflow
     assert 'default: "true"' in workflow
     assert "enable_telegram_publish:" in workflow

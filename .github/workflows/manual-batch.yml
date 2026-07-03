@@ -2,9 +2,8 @@ name: Manual Batch
 
 on:
   schedule:
-    # Temporary schedule smoke test. Restore production schedule to "0 22 * * 4" after verification.
-    # "0 22 * * 4" runs every Friday 07:00 KST because GitHub Actions cron uses UTC.
-    - cron: "*/5 * * * *"
+    # Every Friday 07:00 KST. GitHub Actions cron uses UTC.
+    - cron: "0 22 * * 4"
   workflow_dispatch:
     inputs:
       dry_run:
