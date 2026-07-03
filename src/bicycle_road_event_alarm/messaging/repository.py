@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from bicycle_road_event_alarm.db.models import NormalizedEvent, RawEvent
+from bicycle_road_event_alarm.db.models import NormalizedEvent, RawEvent, RunLog
 from bicycle_road_event_alarm.messaging.message_input import MessageEvent, message_event_from_model
 
 
@@ -20,6 +20,12 @@ def load_publishable_message_events(
         message_event_from_model(normalized_event, source_url=source_url)
         for normalized_event, source_url in rows
     ]
+
+
+def load_run_error_summary(session: Session, run_id: uuid.UUID) -> str | None:
+    return session.execute(
+        select(RunLog.error_summary).where(RunLog.id == run_id)
+    ).scalar_one_or_none()
 
 
 # 조회문 구성: run_id가 있으면 현재 배치에서 수집한 원문 이벤트만 메시지 후보로 사용합니다.

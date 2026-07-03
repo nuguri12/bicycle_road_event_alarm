@@ -52,3 +52,18 @@ def test_generate_fallback_message_includes_generated_date_for_empty_events() ->
     assert result.status == "generated"
     assert result.text == "2026-07-01 기준 이번 주말 자전거 주의 이벤트가 없습니다."
     assert result.event_count == 0
+
+
+def test_generate_fallback_message_distinguishes_source_outage_from_no_event() -> None:
+    result = generate_fallback_message(
+        [],
+        generated_at=datetime(2026, 7, 1, 14, 30, tzinfo=UTC),
+        empty_reason="source_unavailable",
+    )
+
+    assert result.status == "generated"
+    assert "2026-07-01" in result.text
+    assert "확인하지 못했습니다" in result.text
+    assert "수집 소스" in result.text
+    assert "이벤트가 없습니다" not in result.text
+    assert result.event_count == 0

@@ -48,6 +48,11 @@ class LoadedCall:
 
 
 @dataclass
+class GenerateCall:
+    empty_reason: str
+
+
+@dataclass
 class FakePublishResult:
     status: str
     reason: str | None
@@ -139,13 +144,14 @@ def test_generate_messages_cli_prints_telegram_publish_result_and_scopes_run_id(
     monkeypatch.setattr(
         generate_messages,
         "generate_alert_message",
-        lambda _events, openai_generator=None: GeneratedMessage(
+        lambda _events, openai_generator=None, empty_reason="no_event": GeneratedMessage(
             text="주의 구간 안내",
             source="fallback",
             status="generated",
             event_count=1,
         ),
     )
+    monkeypatch.setattr(generate_messages, "load_run_error_summary", lambda _session, _run_id: None)
     monkeypatch.setattr(
         generate_messages,
         "RequestsTelegramClient",
@@ -218,3 +224,91 @@ def test_generate_messages_cli_force_fallback_does_not_create_openai_generator(
     assert generate_messages.main(["--force-fallback"]) == 0
 
     openai_generator.assert_not_called()
+
+
+def test_generate_messages_cli_separates_source_outage_from_true_no_event(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    settings = make_settings(
+        enable_telegram_publish=False,
+        dry_run=True,
+        telegram_bot_token=None,
+        telegram_channel_id=None,
+        openai_api_key=None,
+    )
+    session_factory = FakeSessionFactory()
+    message_run_id = uuid.uuid4()
+    ingest_run_id = uuid.uuid4()
+    run_log = SimpleNamespace(id=message_run_id)
+    generate_calls: list[GenerateCall] = []
+    finish_calls: list[dict[str, object]] = []
+
+    def fake_generate_alert_message(
+        _events: list[object],
+        *,
+        openai_generator: object | None = None,
+        empty_reason: str = "no_event",
+    ) -> GeneratedMessage:
+        generate_calls.append(GenerateCall(empty_reason=empty_reason))
+        return GeneratedMessage(
+            text="2026-07-03 기준 수집 소스 장애로 이벤트를 확인하지 못했습니다.",
+            source="fallback",
+            status="generated",
+            event_count=0,
+        )
+
+    def fake_finish_run_log(_run_log: object, **kwargs: object) -> None:
+        finish_calls.append(kwargs)
+
+    monkeypatch.setattr(generate_messages, "load_dotenv", lambda _path: None)
+    monkeypatch.setattr(generate_messages, "load_settings", lambda: settings)
+    monkeypatch.setattr(
+        generate_messages,
+        "create_engine_from_settings",
+        lambda _settings: object(),
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "create_session_factory",
+        lambda _engine: session_factory,
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "load_publishable_message_events",
+        lambda _session, *, run_id=None: [],
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "load_run_error_summary",
+        lambda _session, run_id: "source_unavailable: hangang=timeout",
+    )
+    monkeypatch.setattr(generate_messages, "start_run_log", lambda _session: run_log)
+    monkeypatch.setattr(generate_messages, "finish_run_log", fake_finish_run_log)
+    monkeypatch.setattr(generate_messages, "generate_alert_message", fake_generate_alert_message)
+    monkeypatch.setattr(
+        generate_messages,
+        "publish_message_once",
+        lambda _session, **_kwargs: FakePublishResult(
+            status="skipped",
+            reason="telegram_publish_disabled",
+            telegram_message_id=None,
+        ),
+    )
+
+    assert generate_messages.main(["--run-id", str(ingest_run_id)]) == 0
+
+    captured = capsys.readouterr()
+    assert "MESSAGE_CONTEXT=source_unavailable" in captured.out
+    assert generate_calls == [GenerateCall(empty_reason="source_unavailable")]
+    assert finish_calls == [
+        {
+            "raw_event_count": 0,
+            "normalized_event_count": 0,
+            "published_message_count": 0,
+            "error_summary": (
+                f"message_context=source_unavailable; ingest_run_id={ingest_run_id}; "
+                "source_unavailable: hangang=timeout"
+            ),
+        }
+    ]

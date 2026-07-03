@@ -15,9 +15,10 @@ def generate_alert_message(
     events: list[MessageEvent],
     *,
     openai_generator: MessageGenerator | None = None,
+    empty_reason: str = "no_event",
 ) -> GeneratedMessage:
     if not events:
-        return generate_fallback_message(events)
+        return generate_fallback_message(events, empty_reason=empty_reason)
 
     if openai_generator is not None:
         try:

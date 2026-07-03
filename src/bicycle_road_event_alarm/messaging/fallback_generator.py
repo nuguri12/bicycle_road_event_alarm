@@ -14,11 +14,24 @@ def generate_fallback_message(
     events: list[MessageEvent],
     *,
     generated_at: datetime | None = None,
+    empty_reason: str = "no_event",
 ) -> GeneratedMessage:
     if not events:
         기준일 = _format_generated_date(generated_at)
+        if empty_reason == "source_unavailable":
+            text = (
+                f"{기준일} 기준 이번 주말 자전거 주의 이벤트를 확인하지 못했습니다. "
+                "모든 수집 소스에 접근하지 못했습니다."
+            )
+        elif empty_reason == "partial_source_unavailable":
+            text = (
+                f"{기준일} 기준 확인 가능한 소스에서는 이번 주말 자전거 주의 이벤트가 없습니다. "
+                "일부 수집 소스는 접근하지 못했습니다."
+            )
+        else:
+            text = f"{기준일} 기준 이번 주말 자전거 주의 이벤트가 없습니다."
         return GeneratedMessage(
-            text=f"{기준일} 기준 이번 주말 자전거 주의 이벤트가 없습니다.",
+            text=text,
             source="fallback",
             status="generated",
             event_count=0,

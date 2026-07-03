@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import uuid
+from collections.abc import Sequence
 from typing import cast
 
 from dotenv import load_dotenv
@@ -12,7 +13,10 @@ from bicycle_road_event_alarm.crawler.repository import finish_run_log, start_ru
 from bicycle_road_event_alarm.db.engine import create_engine_from_settings, create_session_factory
 from bicycle_road_event_alarm.messaging.openai_generator import OpenAIClient, OpenAIMessageGenerator
 from bicycle_road_event_alarm.messaging.publish_service import publish_message_once
-from bicycle_road_event_alarm.messaging.repository import load_publishable_message_events
+from bicycle_road_event_alarm.messaging.repository import (
+    load_publishable_message_events,
+    load_run_error_summary,
+)
 from bicycle_road_event_alarm.messaging.service import generate_alert_message
 from bicycle_road_event_alarm.messaging.telegram_publisher import (
     RequestsTelegramClient,
@@ -50,6 +54,10 @@ def main(argv: list[str] | None = None) -> int:
         run_log = start_run_log(session)
         session.flush()
         events = load_publishable_message_events(session, run_id=args.run_id)
+        source_error_summary = (
+            load_run_error_summary(session, args.run_id) if args.run_id is not None else None
+        )
+        message_context = _message_context(events, source_error_summary)
 
         generator = None
         if not args.force_fallback and events and settings.openai_api_key is not None:
@@ -58,7 +66,11 @@ def main(argv: list[str] | None = None) -> int:
                 model=DEFAULT_OPENAI_MODEL,
             )
 
-        result = generate_alert_message(events, openai_generator=generator)
+        result = generate_alert_message(
+            events,
+            openai_generator=generator,
+            empty_reason=message_context,
+        )
         publish_result = publish_message_once(
             session,
             run_id=run_log.id,
@@ -77,12 +89,16 @@ def main(argv: list[str] | None = None) -> int:
             raw_event_count=0,
             normalized_event_count=0,
             published_message_count=1 if publish_result.status == "success" else 0,
+            error_summary=_message_error_summary(
+                args.run_id, message_context, source_error_summary
+            ),
         )
         session.commit()
 
     print(f"MESSAGE_STATUS={result.status}")
     print(f"MESSAGE_SOURCE={result.source}")
     print(f"MESSAGE_EVENT_COUNT={result.event_count}")
+    print(f"MESSAGE_CONTEXT={message_context}")
     print(f"TELEGRAM_STATUS={publish_result.status}")
     if publish_result.reason is not None:
         print(f"TELEGRAM_REASON={publish_result.reason}")
@@ -91,6 +107,30 @@ def main(argv: list[str] | None = None) -> int:
     if result.text:
         print(result.text)
     return 0
+
+
+def _message_context(events: Sequence[object], source_error_summary: str | None) -> str:
+    if events:
+        return "event_alert"
+    if source_error_summary is None:
+        return "no_event"
+    if source_error_summary.startswith("source_unavailable:"):
+        return "source_unavailable"
+    if source_error_summary.startswith("partial_source_unavailable:"):
+        return "partial_source_unavailable"
+    return "no_event"
+
+
+def _message_error_summary(
+    ingest_run_id: uuid.UUID | None,
+    message_context: str,
+    source_error_summary: str | None,
+) -> str | None:
+    if message_context not in {"source_unavailable", "partial_source_unavailable"}:
+        return None
+    return (
+        f"message_context={message_context}; ingest_run_id={ingest_run_id}; {source_error_summary}"
+    )
 
 
 if __name__ == "__main__":
