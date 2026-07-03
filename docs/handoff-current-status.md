@@ -29,13 +29,13 @@ The runtime MVP sources are Hangang park events, Hangang park notices, and Ara W
 - Workflow file: `.github/workflows/manual-batch.yml`
 - Workflow name: `Manual Batch`
 ```yaml
-cron: "0 22 * * 4"
+cron: "30 22 * * *"
 ```
 
 Meaning:
 
 - GitHub Actions cron uses UTC.
-- `0 22 * * 4` runs every Friday 07:00 KST.
+- `30 22 * * *` runs every day at 07:30 KST.
 
 Scheduled runs force real publish mode:
 
@@ -85,7 +85,7 @@ Fix applied locally:
 - Renamed the second migration revision to `0002_publish_success_idx`.
 - Verified `python -m alembic heads` reports `0002_publish_success_idx (head)`.
 - Verified `python -m alembic upgrade head` succeeds against Supabase.
-- Restored production cron to `0 22 * * 4`.
+- Production cron is now `30 22 * * *`.
 - Added workflow `concurrency` so manual and scheduled batches on the same branch run sequentially.
 - Separated Alembic migrations from scheduled runtime batches.
 - Migrations now run only for manual `workflow_dispatch` when `apply_migrations=true`.
@@ -303,7 +303,7 @@ success
 
 Remote verification after push:
 
-- GitHub `main` contained production cron `cron: "0 22 * * 4"`.
+- GitHub `main` contained production cron `cron: "30 22 * * *"`.
 - GitHub `main` contained workflow `concurrency`.
 - GitHub `main` gated `python -m alembic upgrade head` behind manual `apply_migrations=true`.
 - GitHub `main` contained `BATCH_RUN_ID` capture.
@@ -316,7 +316,7 @@ After this workflow hardening commit is pushed, check GitHub Actions:
 
 1. Open the repository Actions tab.
 2. Select `Manual Batch`.
-3. Wait for the next Friday 07:00 KST scheduled run, or run `workflow_dispatch` manually to verify the same batch path.
+3. Wait for the next daily 07:30 KST scheduled run, or run `workflow_dispatch` manually to verify the same batch path.
 4. Use `apply_migrations=true` only when an Alembic migration should be applied.
 5. Open the run logs.
 6. Confirm:

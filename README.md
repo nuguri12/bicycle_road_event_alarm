@@ -140,13 +140,13 @@ Workflow 이름:
 현재 운영 schedule:
 
 ```yaml
-cron: "0 22 * * 4"
+cron: "30 22 * * *"
 ```
 
 의미:
 
 - GitHub Actions cron은 UTC 기준입니다.
-- `0 22 * * 4`는 한국 시간 기준 매주 금요일 07:00입니다.
+- `30 22 * * *`는 한국 시간 기준 매일 07:30입니다.
 
 scheduled run에서는 실제 발송 모드가 강제로 켜집니다.
 
@@ -176,7 +176,7 @@ apply_migrations=true
 ## 6. GitHub schedule 진단 결과
 
 2026-07-01 14:30 KST에 예정했던 schedule run이 GitHub Actions에 나타나지 않아 임시로 `*/5 * * * *` smoke schedule을 사용했습니다.
-이후 GitHub API와 Actions 이력에서 `schedule` 이벤트가 생성되는 것을 확인했고, 운영 schedule은 `0 22 * * 4`로 복구했습니다.
+이후 GitHub API와 Actions 이력에서 `schedule` 이벤트가 생성되는 것을 확인했고, 운영 schedule은 `30 22 * * *`로 운영합니다.
 
 확인한 내용:
 
@@ -240,7 +240,7 @@ DRY_RUN=false
 
 남은 작업:
 
-- 다음 금요일 07:00 KST 운영 schedule 실행 결과 확인
+- 다음 매일 07:30 KST 운영 schedule 실행 결과 확인
 - 필요 시 수동 실행에서 `apply_migrations=true`로 DB migration 적용
 - 아라뱃길 공식 공지 URL 정밀도 추가 검증
 - 전체 소스 장애와 실제 이벤트 없음 상태를 더 명확히 분리

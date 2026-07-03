@@ -35,7 +35,14 @@ Last updated: 2026-07-03
 - Decision: Remove the temporary push smoke trigger and restore production cron `0 22 * * 4`.
 - Reason: Push run `28660665074` completed successfully with `TELEGRAM_STATUS=success` and `TELEGRAM_MESSAGE_ID=11`.
 - Alternatives considered: Keep the push trigger for future smoke runs; add a dedicated smoke workflow.
-- Impact: Future automatic runs depend on the weekly production schedule, while Telegram publish failures now fail the workflow visibly.
+- Impact: The temporary smoke trigger was removed, and Telegram publish failures now fail the workflow visibly.
+
+## 2026-07-03: Change production schedule to daily 07:30 KST
+
+- Decision: Set production cron to `30 22 * * *`.
+- Reason: The operator requested daily morning execution at 07:30 KST.
+- Alternatives considered: Keep weekly Friday 07:00 KST schedule.
+- Impact: Scheduled runs now publish in real mode every day, so no-event message volume should be monitored.
 
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 

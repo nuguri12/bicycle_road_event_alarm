@@ -7,7 +7,7 @@ Last updated: 2026-07-03
 ### Verify scheduled production Telegram publish
 
 - Production-mode Telegram publishing was verified through push-based smoke run `28660665074`.
-- The workflow is restored to production cron `0 22 * * 4`.
+- The workflow uses production cron `30 22 * * *`.
 - The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
 - Need the next normal scheduled `event=schedule` run with:
@@ -30,8 +30,8 @@ Last updated: 2026-07-03
 
 - Empty fallback messages now include KST send date and time.
 - This helps smoke tests avoid stale duplicate hashes.
-- It can also allow repeated no-event messages if scheduled too frequently.
-- Production cron is weekly, so risk is acceptable for now.
+- It can also allow repeated no-event messages.
+- Production cron is daily, so monitor whether the channel receives too many no-event confirmations.
 
 ## Technical Debt
 

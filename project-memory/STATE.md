@@ -8,7 +8,7 @@ Operate and verify the Weekend Cycling Event Alert Service as a scheduled GitHub
 
 ## Active Task
 
-Monitor the restored weekly production schedule after a successful push-based Telegram smoke.
+Monitor the daily 07:30 KST production schedule after a successful push-based Telegram smoke.
 
 ## Current Runtime State
 
@@ -16,8 +16,8 @@ Monitor the restored weekly production schedule after a successful push-based Te
 - Branch strategy: direct development on `main`
 - Latest verified smoke run: GitHub Actions run `28660665074` on commit `2a0c825`
 - Workflow: `.github/workflows/manual-batch.yml`
-- Production schedule: `cron: "0 22 * * 4"`
-- Meaning: every Friday 07:00 KST
+- Production schedule: `cron: "30 22 * * *"`
+- Meaning: every day 07:30 KST
 - Temporary push smoke trigger has been removed after successful verification.
 - Scheduled runs force real publish mode:
   - `ENABLE_TELEGRAM_PUBLISH=true`
@@ -48,7 +48,7 @@ Monitor the restored weekly production schedule after a successful push-based Te
 - The push-based production smoke succeeded at 2026-07-03 21:31 KST with `TELEGRAM_STATUS=success` and `TELEGRAM_MESSAGE_ID=11`.
 - Ara Waterway often times out from GitHub Actions runners.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
-- No-event messages with send time can avoid same-day duplicate hash collisions, but that also weakens dedupe for repeated no-event scheduled runs.
+- No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions
 

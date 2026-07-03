@@ -2,8 +2,8 @@ name: Manual Batch
 
 on:
   schedule:
-    # GitHub Actions cron is UTC; 22:00 UTC Thursday equals Friday 07:00 KST.
-    - cron: "0 22 * * 4"
+    # GitHub Actions cron is UTC; 22:30 UTC equals 07:30 KST.
+    - cron: "30 22 * * *"
   # 수동 실행: 검증 또는 긴급 재실행 시 안전 옵션을 선택합니다.
   workflow_dispatch:
     inputs:

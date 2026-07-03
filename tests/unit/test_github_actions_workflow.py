@@ -13,8 +13,8 @@ def test_manual_batch_workflow_exists_with_safe_defaults() -> None:
     assert "concurrency:" in workflow
     assert "group: manual-batch-${{ github.ref }}" in workflow
     assert "cancel-in-progress: false" in workflow
-    assert 'cron: "0 22 * * 4"' in workflow
-    assert "Friday 07:00 KST" in workflow
+    assert 'cron: "30 22 * * *"' in workflow
+    assert "07:30 KST" in workflow
     assert "dry_run:" in workflow
     assert 'default: "true"' in workflow
     assert "enable_telegram_publish:" in workflow
