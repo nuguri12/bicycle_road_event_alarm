@@ -20,7 +20,7 @@ Weekend Cycling Event Alert Service.
 
 The service collects public traffic-control and event information that may affect bicycle-road users, stores raw events, normalizes them, generates Korean alert messages, and publishes them to a Telegram channel.
 
-The MVP source is SPATIC. Additional sources should favor bicycle-relevant data such as Hangang park events and notices rather than broad vehicle traffic feeds.
+The runtime MVP sources are Hangang park events, Hangang park notices, and Ara Waterway notices. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
 ## Current Operational Status
 
@@ -162,8 +162,11 @@ Do not print or commit secret values.
 
 ### Raw Event Ingestion
 
-- SPATIC fixture parser
-- SPATIC live ingestion
+- Hangang park event fixture parser
+- Hangang park notice fixture parser
+- Ara Waterway notice fixture parser
+- multi-source live ingestion
+- SPATIC parser retained but excluded from runtime ingestion
 - request timeout/retry wrapper
 - raw candidate hashing
 - duplicate-aware `raw_events` save
@@ -343,9 +346,9 @@ limit 10;
 
 - GitHub Actions schedule is not a strict real-time scheduler.
 - The first scheduled run after workflow edits may be delayed or missed.
-- SPATIC is not bicycle-specific and may be unstable or return no parseable events.
+- Ara Waterway source URL precision still needs additional official-source validation.
 - Source outage and true no-event status are still not fully separated in the final user-facing message.
-- The current SPATIC parser is fixture-driven and may require fixture updates when real HTML changes.
+- HTML parsers are fixture-driven and may require fixture updates when source pages change.
 - Normalization rules are deterministic MVP heuristics.
 - Some older sprint docs may still contain mojibake text from earlier encoding issues.
 
@@ -353,8 +356,6 @@ limit 10;
 
 1. Push the workflow hardening commit if not already pushed.
 2. Run `workflow_dispatch` once with `apply_migrations=false` to confirm the runtime batch path no longer depends on migrations.
-3. Add the next source with better bicycle relevance:
-   - Recommended first: Hangang park events.
-   - Recommended second: Hangang park notices.
-4. Improve source outage vs true no-event messaging.
-5. Consider recording a clearer run-level publish summary in `run_logs`.
+3. Improve source outage vs true no-event messaging.
+4. Consider recording a clearer run-level publish summary in `run_logs`.
+5. Add a more precise Ara Waterway official notice URL if one is confirmed.
