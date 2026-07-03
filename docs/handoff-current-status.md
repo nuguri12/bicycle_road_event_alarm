@@ -86,12 +86,15 @@ Fix applied locally:
 - Verified `python -m alembic heads` reports `0002_publish_success_idx (head)`.
 - Verified `python -m alembic upgrade head` succeeds against Supabase.
 - Restored production cron to `0 22 * * 4`.
+- Added workflow `concurrency` so manual and scheduled batches on the same branch run sequentially.
+- Separated Alembic migrations from scheduled runtime batches.
+- Migrations now run only for manual `workflow_dispatch` when `apply_migrations=true`.
 
 ## Runtime Flow
 
 Current GitHub Actions batch flow:
 
-1. Apply database migrations.
+1. Optionally apply database migrations for manual `workflow_dispatch` only when `apply_migrations=true`.
 2. Run `python -m bicycle_road_event_alarm.cli.ingest_raw_events`.
 3. Capture `RUN_ID=<uuid>` from the ingest output.
 4. Store it as `BATCH_RUN_ID` in `$GITHUB_ENV`.
@@ -297,20 +300,23 @@ success
 
 Remote verification after push:
 
-- GitHub `main` contained `cron: "*/5 * * * *"`.
+- GitHub `main` contained production cron `cron: "0 22 * * 4"`.
+- GitHub `main` contained workflow `concurrency`.
+- GitHub `main` gated `python -m alembic upgrade head` behind manual `apply_migrations=true`.
 - GitHub `main` contained `BATCH_RUN_ID` capture.
 - GitHub `main` contained `normalize_events --run-id "$BATCH_RUN_ID"`.
 - GitHub `main` contained `generate_messages --run-id "$BATCH_RUN_ID"`.
 
 ## Operator Checks
 
-After the cron failure fix is pushed, check GitHub Actions:
+After this workflow hardening commit is pushed, check GitHub Actions:
 
 1. Open the repository Actions tab.
 2. Select `Manual Batch`.
 3. Wait for the next Friday 07:00 KST scheduled run, or run `workflow_dispatch` manually to verify the same batch path.
-4. Open the run logs.
-5. Confirm:
+4. Use `apply_migrations=true` only when an Alembic migration should be applied.
+5. Open the run logs.
+6. Confirm:
    - `RUN_ID=<uuid>`
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_SOURCE=openai` or `MESSAGE_SOURCE=fallback`
@@ -345,8 +351,8 @@ limit 10;
 
 ## Recommended Next Tasks
 
-1. Push the cron failure fix if not already pushed.
-2. Run `workflow_dispatch` once to confirm migration no longer fails in GitHub Actions.
+1. Push the workflow hardening commit if not already pushed.
+2. Run `workflow_dispatch` once with `apply_migrations=false` to confirm the runtime batch path no longer depends on migrations.
 3. Add the next source with better bicycle relevance:
    - Recommended first: Hangang park events.
    - Recommended second: Hangang park notices.

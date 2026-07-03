@@ -137,17 +137,7 @@ Workflow 이름:
 
 - `Manual Batch`
 
-현재 임시 검증용 schedule:
-
-```yaml
-cron: "*/5 * * * *"
-```
-
-목적:
-
-- GitHub가 `schedule` 이벤트를 실제 생성하는지 확인하기 위한 smoke test입니다.
-
-검증 후 복구할 운영 schedule:
+현재 운영 schedule:
 
 ```yaml
 cron: "0 22 * * 4"
@@ -170,11 +160,23 @@ DRY_RUN=false
 ```env
 dry_run=true
 enable_telegram_publish=false
+force_fallback=false
+apply_migrations=false
 ```
 
-## 6. GitHub schedule 미생성 진단
+DB 마이그레이션은 예약 실행과 분리되어 있습니다.
+필요할 때만 수동 실행에서 `apply_migrations=true`를 선택해 Alembic migration을 적용합니다.
 
-2026-07-01 14:30 KST에 예정했던 schedule run이 GitHub Actions에 나타나지 않았습니다.
+```env
+apply_migrations=true
+```
+
+동일 브랜치에서 수동 실행과 예약 실행이 겹치면 GitHub Actions `concurrency` 설정으로 순차 실행됩니다.
+
+## 6. GitHub schedule 진단 결과
+
+2026-07-01 14:30 KST에 예정했던 schedule run이 GitHub Actions에 나타나지 않아 임시로 `*/5 * * * *` smoke schedule을 사용했습니다.
+이후 GitHub API와 Actions 이력에서 `schedule` 이벤트가 생성되는 것을 확인했고, 운영 schedule은 `0 22 * * 4`로 복구했습니다.
 
 확인한 내용:
 
@@ -182,16 +184,10 @@ enable_telegram_publish=false
 - repository default branch는 `main`이었습니다.
 - remote `main`에 workflow 파일이 존재했습니다.
 - remote workflow 파일에 cron 표현식이 존재했습니다.
-- GitHub API 조회 결과 당시 `event=schedule` run은 0건이었습니다.
+- 이후 `event=schedule` run 생성이 확인되었습니다.
 
-따라서 현재 가장 가능성 높은 원인은 코드 문제가 아니라 GitHub Actions schedule 특성입니다.
-
-- GitHub Actions schedule은 고부하 시간대에 지연될 수 있습니다.
-- queued job이 드롭될 수 있습니다.
-- workflow 변경 직후 첫 tick이 바로 등록되지 않을 수 있습니다.
-- schedule은 default branch의 최신 커밋에서만 실행됩니다.
-
-현재 `*/5 * * * *` 설정은 이 문제를 확인하기 위한 임시 조치입니다.
+추가로 예약 실행 실패의 직접 원인은 GitHub schedule 미생성이 아니라 Alembic revision ID 길이였습니다.
+해당 migration ID는 `0002_publish_success_idx`로 단축했고, 예약 실행에서는 DB migration을 수행하지 않도록 분리했습니다.
 
 ## 7. 환경 변수와 Secrets
 
@@ -242,8 +238,8 @@ DRY_RUN=false
 
 남은 작업:
 
-- `*/5 * * * *` schedule smoke test 결과 확인
-- 검증 후 운영 schedule `0 22 * * 4`로 복구
+- 다음 금요일 07:00 KST 운영 schedule 실행 결과 확인
+- 필요 시 수동 실행에서 `apply_migrations=true`로 DB migration 적용
 - SPATIC 외 자전거 이용자에게 더 직접적인 정보 소스 추가
 - SPATIC 장애와 실제 이벤트 없음 상태를 더 명확히 분리
 - 운영 모니터링 문서와 알림 기준 보강
