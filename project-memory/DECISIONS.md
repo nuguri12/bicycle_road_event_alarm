@@ -23,6 +23,13 @@ Last updated: 2026-07-03
 - Alternatives considered: Trigger workflow_dispatch through GitHub UI; run local production smoke with `.env`; use Chrome automation.
 - Impact: Chrome automation was unavailable and local `.env` was absent, so the next feasible automated check is another one-off scheduled production smoke.
 
+## 2026-07-03: 21:20 KST smoke did not create a schedule run
+
+- Decision: Add a temporary push-based production smoke trigger limited to `project-memory/SMOKE_TRIGGER.md`.
+- Reason: Both 19:00 KST and 21:20 KST one-off schedules did not create GitHub Actions runs, so the Telegram path could not be exercised through schedule.
+- Alternatives considered: Wait longer for GitHub schedule; use Chrome UI automation for workflow_dispatch; local production smoke with `.env`.
+- Impact: The next push should run `Manual Batch` as a `push` event with real Telegram publish mode. Remove this temporary trigger after the result is known.
+
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 
 - Decision: Retry the production smoke at 19:00 KST with more lead time before the scheduled minute.

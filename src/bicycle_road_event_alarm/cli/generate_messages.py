@@ -106,6 +106,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"TELEGRAM_MESSAGE_ID={publish_result.telegram_message_id}")
     if result.text:
         print(result.text)
+    if (
+        settings.enable_telegram_publish
+        and not settings.dry_run
+        and publish_result.status == "failed"
+    ):
+        return 1
     return 0
 
 

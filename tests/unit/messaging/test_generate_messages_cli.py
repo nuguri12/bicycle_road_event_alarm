@@ -226,6 +226,63 @@ def test_generate_messages_cli_force_fallback_does_not_create_openai_generator(
     openai_generator.assert_not_called()
 
 
+def test_generate_messages_cli_returns_nonzero_when_real_telegram_publish_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = make_settings(
+        enable_telegram_publish=True,
+        dry_run=False,
+        telegram_bot_token="bot-token",
+        telegram_channel_id="@cycling_alerts",
+        openai_api_key=None,
+    )
+    session_factory = FakeSessionFactory()
+    run_log = SimpleNamespace(id=uuid.uuid4())
+
+    monkeypatch.setattr(generate_messages, "load_dotenv", lambda _path: None)
+    monkeypatch.setattr(generate_messages, "load_settings", lambda: settings)
+    monkeypatch.setattr(
+        generate_messages,
+        "create_engine_from_settings",
+        lambda _settings: object(),
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "create_session_factory",
+        lambda _engine: session_factory,
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "load_publishable_message_events",
+        lambda _session, *, run_id=None: [],
+    )
+    monkeypatch.setattr(generate_messages, "load_run_error_summary", lambda _session, _run_id: None)
+    monkeypatch.setattr(generate_messages, "start_run_log", lambda _session: run_log)
+    monkeypatch.setattr(generate_messages, "finish_run_log", lambda _run_log, **_kwargs: None)
+    monkeypatch.setattr(
+        generate_messages,
+        "generate_alert_message",
+        lambda _events, openai_generator=None, empty_reason="no_event": GeneratedMessage(
+            text="2026-07-03 21:30 기준 이번 주말 자전거 주의 이벤트가 없습니다.",
+            source="fallback",
+            status="generated",
+            event_count=0,
+        ),
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "publish_message_once",
+        lambda _session, **_kwargs: FakePublishResult(
+            status="failed",
+            reason="telegram_send_failed",
+            telegram_message_id=None,
+        ),
+    )
+
+    assert generate_messages.main(["--run-id", str(uuid.uuid4())]) == 1
+    assert session_factory.committed is True
+
+
 def test_generate_messages_cli_separates_source_outage_from_true_no_event(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

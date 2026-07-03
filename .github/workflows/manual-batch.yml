@@ -1,6 +1,12 @@
 name: Manual Batch
 
 on:
+  # Temporary production smoke fallback: pushing the marker file triggers one real publish run.
+  push:
+    branches:
+      - main
+    paths:
+      - "project-memory/SMOKE_TRIGGER.md"
   # Temporary production smoke: 2026-07-03 21:20 KST.
   schedule:
     # GitHub Actions cron is UTC; 12:20 UTC equals 21:20 KST.
@@ -58,8 +64,8 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
-      ENABLE_TELEGRAM_PUBLISH: ${{ github.event_name == 'schedule' && 'true' || inputs.enable_telegram_publish }}
-      DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+      ENABLE_TELEGRAM_PUBLISH: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'true' || inputs.enable_telegram_publish }}
+      DRY_RUN: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'false' || inputs.dry_run }}
 
     steps:
       # 실행 환경 준비

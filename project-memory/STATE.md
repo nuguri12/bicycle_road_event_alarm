@@ -8,7 +8,7 @@ Operate and verify the Weekend Cycling Event Alert Service as a scheduled GitHub
 
 ## Active Task
 
-Wait for the temporary production smoke scheduled for 2026-07-03 21:20 KST, then restore the normal weekly production cron.
+Run the temporary push-based production smoke, then remove the push trigger and restore the normal weekly production cron.
 
 ## Current Runtime State
 
@@ -18,6 +18,7 @@ Wait for the temporary production smoke scheduled for 2026-07-03 21:20 KST, then
 - Workflow: `.github/workflows/manual-batch.yml`
 - Temporary schedule: `cron: "20 12 3 7 *"`
 - Meaning: 2026-07-03 12:20 UTC, which is 2026-07-03 21:20 KST
+- Temporary push smoke trigger: changes to `project-memory/SMOKE_TRIGGER.md`
 - Scheduled runs force real publish mode:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
@@ -42,17 +43,18 @@ Wait for the temporary production smoke scheduled for 2026-07-03 21:20 KST, then
 ## Known Current Observations
 
 - The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
+- The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
 - Ara Waterway often times out from GitHub Actions runners.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid same-day duplicate hash collisions, but that also weakens dedupe for repeated no-event scheduled runs.
 
 ## Next Actions
 
-1. After 2026-07-03 21:20 KST, check GitHub Actions for a `schedule` event run.
+1. Push the temporary smoke trigger commit and check GitHub Actions for a `push` event run.
 2. Confirm Telegram received the production smoke message.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_CONTEXT=<...>`
    - `TELEGRAM_STATUS=success` or a clear failure reason
-4. Restore production cron to `0 22 * * 4` after the smoke result is known.
+4. Remove the temporary push trigger and restore production cron to `0 22 * * 4` after the smoke result is known.
 5. Update this project memory after restoring the cron.
