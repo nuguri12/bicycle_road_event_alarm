@@ -17,14 +17,14 @@ def generate_fallback_message(
     empty_reason: str = "no_event",
 ) -> GeneratedMessage:
     if not events:
-        기준일 = _format_generated_date(generated_at)
+        발송시각 = _format_generated_datetime(generated_at)
         if empty_reason == "source_unavailable":
             text = (
-                f"{기준일} 기준 이번 주말 자전거 주의 이벤트를 확인하지 못했습니다. "
+                f"{발송시각} 기준 이번 주말 자전거 주의 이벤트를 확인하지 못했습니다. "
                 "모든 수집 소스에 접근하지 못했습니다."
             )
         else:
-            text = f"{기준일} 기준 이번 주말 자전거 주의 이벤트가 없습니다."
+            text = f"{발송시각} 기준 이번 주말 자전거 주의 이벤트가 없습니다."
         return GeneratedMessage(
             text=text,
             source="fallback",
@@ -54,12 +54,12 @@ def generate_fallback_message(
     )
 
 
-# 기준일 표시: GitHub runner가 UTC여도 운영자가 보는 한국 날짜로 기록합니다.
-def _format_generated_date(generated_at: datetime | None) -> str:
+# 발송 시각 표시: GitHub runner가 UTC여도 운영자가 보는 한국 일자와 시간으로 기록합니다.
+def _format_generated_datetime(generated_at: datetime | None) -> str:
     기준시각 = generated_at or datetime.now(UTC)
     if 기준시각.tzinfo is None:
         기준시각 = 기준시각.replace(tzinfo=UTC)
-    return 기준시각.astimezone(KST).date().isoformat()
+    return 기준시각.astimezone(KST).strftime("%Y-%m-%d %H:%M")
 
 
 # 이벤트 출력: 각 이벤트를 지정된 블록으로 정리해 15초 안에 읽기 쉽게 만듭니다.
