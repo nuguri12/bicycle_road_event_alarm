@@ -4,11 +4,11 @@ Last updated: 2026-07-03
 
 ## Current Objective
 
-Operate and verify the Weekend Cycling Event Alert Service as a scheduled GitHub Actions batch that collects bicycle-impacting public events, normalizes them, generates a Korean Telegram message, and publishes to a private Telegram channel.
+Operate and verify the Weekend Cycling Event Alert Service as a Cloudflare-triggered GitHub Actions batch that collects bicycle-impacting public events, normalizes them, generates a Korean Telegram message, and publishes to a private Telegram channel.
 
 ## Active Task
 
-Monitor the daily 07:30 KST production schedule after a successful push-based Telegram smoke.
+Deploy and verify the Cloudflare Workers Cron scheduler for daily 07:30 KST production runs.
 
 ## Current Runtime State
 
@@ -16,10 +16,12 @@ Monitor the daily 07:30 KST production schedule after a successful push-based Te
 - Branch strategy: direct development on `main`
 - Latest verified smoke run: GitHub Actions run `28660665074` on commit `2a0c825`
 - Workflow: `.github/workflows/manual-batch.yml`
-- Production schedule: `cron: "30 22 * * *"`
+- External scheduler: `cloudflare/scheduler`
+- Production schedule: Cloudflare Cron `30 22 * * *`
 - Meaning: every day 07:30 KST
+- GitHub Actions native `schedule` is removed to avoid duplicate sends.
 - Temporary push smoke trigger has been removed after successful verification.
-- Scheduled runs force real publish mode:
+- Cloudflare dispatches `workflow_dispatch` with real publish inputs:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
 - Manual workflow runs default to safe dry-run mode:
@@ -52,10 +54,12 @@ Monitor the daily 07:30 KST production schedule after a successful push-based Te
 
 ## Next Actions
 
-1. Monitor the next normal `schedule` event run.
-2. Confirm Telegram receives the scheduled production message.
+1. Deploy `cloudflare/scheduler` with Wrangler.
+2. Set Cloudflare Worker secret `GITHUB_TOKEN`.
+3. Trigger or wait for Cloudflare Cron and confirm GitHub creates a `workflow_dispatch` run.
+4. Confirm Telegram receives the scheduled production message.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_CONTEXT=<...>`
    - `TELEGRAM_STATUS=success` or a clear failure reason
-4. If no `schedule` event run appears at the production time, treat GitHub schedule triggering as the remaining operational issue.
+5. If Cloudflare dispatch fails, check Worker logs and GitHub token Actions write permission.

@@ -44,6 +44,13 @@ Last updated: 2026-07-03
 - Alternatives considered: Keep weekly Friday 07:00 KST schedule.
 - Impact: Scheduled runs now publish in real mode every day, so no-event message volume should be monitored.
 
+## 2026-07-04: Replace GitHub native schedule with Cloudflare Workers Cron
+
+- Decision: Add `cloudflare/scheduler` and remove GitHub Actions native `schedule` from `manual-batch.yml`.
+- Reason: GitHub native scheduled runs did not appear reliably, while manual `workflow_dispatch` successfully sent Telegram messages.
+- Alternatives considered: Continue relying on GitHub schedule; use cron-job.org; use GCP Cloud Scheduler.
+- Impact: Cloudflare owns the daily 07:30 KST trigger and calls GitHub `workflow_dispatch`; GitHub no longer self-schedules to avoid duplicate sends.
+
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 
 - Decision: Retry the production smoke at 19:00 KST with more lead time before the scheduled minute.

@@ -28,13 +28,15 @@ The runtime MVP sources are Hangang park events, Hangang park notices, and Ara W
 
 - Workflow file: `.github/workflows/manual-batch.yml`
 - Workflow name: `Manual Batch`
-```yaml
-cron: "30 22 * * *"
+Cloudflare Cron:
+
+```toml
+crons = ["30 22 * * *"]
 ```
 
 Meaning:
 
-- GitHub Actions cron uses UTC.
+- Cloudflare cron uses UTC.
 - `30 22 * * *` runs every day at 07:30 KST.
 
 Scheduled runs force real publish mode:
@@ -85,7 +87,7 @@ Fix applied locally:
 - Renamed the second migration revision to `0002_publish_success_idx`.
 - Verified `python -m alembic heads` reports `0002_publish_success_idx (head)`.
 - Verified `python -m alembic upgrade head` succeeds against Supabase.
-- Production cron is now `30 22 * * *`.
+- Production cron is now Cloudflare Cron `30 22 * * *`.
 - Added workflow `concurrency` so manual and scheduled batches on the same branch run sequentially.
 - Separated Alembic migrations from scheduled runtime batches.
 - Migrations now run only for manual `workflow_dispatch` when `apply_migrations=true`.
@@ -303,7 +305,7 @@ success
 
 Remote verification after push:
 
-- GitHub `main` contained production cron `cron: "30 22 * * *"`.
+- GitHub `main` uses `workflow_dispatch`; Cloudflare Cron owns production scheduling.
 - GitHub `main` contained workflow `concurrency`.
 - GitHub `main` gated `python -m alembic upgrade head` behind manual `apply_migrations=true`.
 - GitHub `main` contained `BATCH_RUN_ID` capture.
@@ -316,7 +318,7 @@ After this workflow hardening commit is pushed, check GitHub Actions:
 
 1. Open the repository Actions tab.
 2. Select `Manual Batch`.
-3. Wait for the next daily 07:30 KST scheduled run, or run `workflow_dispatch` manually to verify the same batch path.
+3. Wait for the next daily 07:30 KST Cloudflare-triggered run, or run `workflow_dispatch` manually to verify the same batch path.
 4. Use `apply_migrations=true` only when an Alembic migration should be applied.
 5. Open the run logs.
 6. Confirm:
@@ -344,8 +346,8 @@ limit 10;
 
 ## Known Risks
 
-- GitHub Actions schedule is not a strict real-time scheduler.
-- The first scheduled run after workflow edits may be delayed or missed.
+- GitHub Actions native schedule was unreliable in this project.
+- Cloudflare Workers Cron now owns the production trigger.
 - Ara Waterway source URL precision still needs additional official-source validation.
 - Source outage and true no-event status are still not fully separated in the final user-facing message.
 - HTML parsers are fixture-driven and may require fixture updates when source pages change.

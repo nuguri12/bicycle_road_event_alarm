@@ -4,7 +4,7 @@ Last updated: 2026-07-03
 
 ## System Shape
 
-This is a scheduled batch service, not a long-running server.
+This is a Cloudflare-triggered scheduled batch service, not a long-running server.
 
 GitHub Actions runs a Python CLI pipeline:
 
@@ -44,7 +44,8 @@ SPATIC parser code remains in the repository for reference/regression, but runti
 - Supabase PostgreSQL stores run logs, raw events, normalized events, and publish attempts.
 - OpenAI is used for message generation when publishable events exist and API configuration is available.
 - Telegram Bot API publishes the generated message to a private channel.
-- GitHub Actions schedules and runs the batch.
+- Cloudflare Workers Cron schedules the production batch.
+- GitHub Actions runs the batch through `workflow_dispatch`.
 
 ## Failure Semantics
 
@@ -65,4 +66,4 @@ SPATIC parser code remains in the repository for reference/regression, but runti
 
 Manual workflow dispatch is safe by default: dry-run and Telegram publishing disabled.
 
-Scheduled workflow runs are production mode by design: Telegram publishing enabled and dry-run disabled.
+Cloudflare-triggered workflow dispatches are production mode by design: Telegram publishing enabled and dry-run disabled.

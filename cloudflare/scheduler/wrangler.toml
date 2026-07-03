@@ -1,0 +1,12 @@
+name = "bicycle-road-event-alarm-scheduler"
+main = "src/index.js"
+compatibility_date = "2026-07-04"
+
+[vars]
+GITHUB_OWNER = "nuguri12"
+GITHUB_REPO = "bicycle_road_event_alarm"
+GITHUB_WORKFLOW = "manual-batch.yml"
+GITHUB_REF = "main"
+
+[triggers]
+crons = ["30 22 * * *"]

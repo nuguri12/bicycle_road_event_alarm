@@ -1,9 +1,6 @@
 name: Manual Batch
 
 on:
-  schedule:
-    # GitHub Actions cron is UTC; 22:30 UTC equals 07:30 KST.
-    - cron: "30 22 * * *"
   # 수동 실행: 검증 또는 긴급 재실행 시 안전 옵션을 선택합니다.
   workflow_dispatch:
     inputs:
@@ -57,8 +54,8 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
-      ENABLE_TELEGRAM_PUBLISH: ${{ github.event_name == 'schedule' && 'true' || inputs.enable_telegram_publish }}
-      DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}
+      ENABLE_TELEGRAM_PUBLISH: ${{ inputs.enable_telegram_publish }}
+      DRY_RUN: ${{ inputs.dry_run }}
 
     steps:
       # 실행 환경 준비
