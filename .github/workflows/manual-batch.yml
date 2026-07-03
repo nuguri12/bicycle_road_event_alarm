@@ -1,10 +1,10 @@
 name: Manual Batch
 
 on:
-  # 운영 예약 실행: 매주 금요일 07:00 KST에 주말 통제 이벤트를 확인합니다.
+  # Temporary production smoke: 2026-07-03 17:30 KST.
   schedule:
-    # GitHub Actions cron은 UTC 기준입니다.
-    - cron: "0 22 * * 4"
+    # GitHub Actions cron is UTC; 08:30 UTC equals 17:30 KST.
+    - cron: "30 8 3 7 *"
   # 수동 실행: 검증 또는 긴급 재실행 시 안전 옵션을 선택합니다.
   workflow_dispatch:
     inputs:
