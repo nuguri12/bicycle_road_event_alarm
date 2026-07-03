@@ -8,7 +8,7 @@ Operate and verify the Weekend Cycling Event Alert Service as a scheduled GitHub
 
 ## Active Task
 
-Wait for the temporary production smoke scheduled for 2026-07-03 19:00 KST, then restore the normal weekly production cron.
+Wait for the temporary production smoke scheduled for 2026-07-03 21:20 KST, then restore the normal weekly production cron.
 
 ## Current Runtime State
 
@@ -16,8 +16,8 @@ Wait for the temporary production smoke scheduled for 2026-07-03 19:00 KST, then
 - Branch strategy: direct development on `main`
 - Previous pushed commit before this smoke update: `512b410 project memory update`
 - Workflow: `.github/workflows/manual-batch.yml`
-- Temporary schedule: `cron: "0 10 3 7 *"`
-- Meaning: 2026-07-03 10:00 UTC, which is 2026-07-03 19:00 KST
+- Temporary schedule: `cron: "20 12 3 7 *"`
+- Meaning: 2026-07-03 12:20 UTC, which is 2026-07-03 21:20 KST
 - Scheduled runs force real publish mode:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
@@ -41,13 +41,14 @@ Wait for the temporary production smoke scheduled for 2026-07-03 19:00 KST, then
 
 ## Known Current Observations
 
+- The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - Ara Waterway often times out from GitHub Actions runners.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid same-day duplicate hash collisions, but that also weakens dedupe for repeated no-event scheduled runs.
 
 ## Next Actions
 
-1. After 2026-07-03 19:00 KST, check GitHub Actions for a `schedule` event run.
+1. After 2026-07-03 21:20 KST, check GitHub Actions for a `schedule` event run.
 2. Confirm Telegram received the production smoke message.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`

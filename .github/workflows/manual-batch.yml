@@ -1,10 +1,10 @@
 name: Manual Batch
 
 on:
-  # Temporary production smoke: 2026-07-03 19:00 KST.
+  # Temporary production smoke: 2026-07-03 21:20 KST.
   schedule:
-    # GitHub Actions cron is UTC; 10:00 UTC equals 19:00 KST.
-    - cron: "0 10 3 7 *"
+    # GitHub Actions cron is UTC; 12:20 UTC equals 21:20 KST.
+    - cron: "20 12 3 7 *"
   # 수동 실행: 검증 또는 긴급 재실행 시 안전 옵션을 선택합니다.
   workflow_dispatch:
     inputs:

@@ -16,6 +16,13 @@ Last updated: 2026-07-03
 - Alternatives considered: Manual workflow with real publish inputs; deleting DB dedupe records; adding a dedicated smoke message option.
 - Impact: Must restore normal production cron after the smoke result is known.
 
+## 2026-07-03: 19:00 KST smoke did not create a schedule run
+
+- Decision: Retry the production smoke at 21:20 KST with cron `20 12 3 7 *`.
+- Reason: GitHub Actions did not create a `schedule` event run for the 2026-07-03 19:00 KST one-off cron even though the workflow was active.
+- Alternatives considered: Trigger workflow_dispatch through GitHub UI; run local production smoke with `.env`; use Chrome automation.
+- Impact: Chrome automation was unavailable and local `.env` was absent, so the next feasible automated check is another one-off scheduled production smoke.
+
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 
 - Decision: Retry the production smoke at 19:00 KST with more lead time before the scheduled minute.

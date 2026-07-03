@@ -6,14 +6,15 @@ Last updated: 2026-07-03
 
 ### Restore production cron after temporary smoke
 
-- Current temporary cron: `0 10 3 7 *`
+- Current temporary cron: `20 12 3 7 *`
 - Intended production cron: `0 22 * * 4`
 - Production meaning: every Friday 07:00 KST
-- Restore after the 2026-07-03 19:00 KST smoke result is known.
+- Restore after the 2026-07-03 21:20 KST smoke result is known.
 
 ### Verify scheduled production Telegram publish
 
 - Manual runs have been mostly dry-run or skipped by duplicate publish protection.
+- The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - Need one scheduled `event=schedule` run with:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
