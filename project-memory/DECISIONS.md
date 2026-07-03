@@ -1,0 +1,45 @@
+# Decisions
+
+Last updated: 2026-07-03
+
+## 2026-07-03: Use project memory as the first context layer
+
+- Decision: Add a minimal `project-memory/` directory with state, architecture, repository map, decisions, and open issues.
+- Reason: The project now spans crawling, DB, OpenAI, Telegram, GitHub Actions, and operations. Without memory, future Codex sessions may re-load too much of the repository.
+- Alternatives considered: Continue using only README and handoff docs.
+- Impact: Future sessions should consult `project-memory/` before broad repository exploration.
+
+## 2026-07-03: Temporary production smoke schedule
+
+- Decision: Temporarily set GitHub Actions cron to `30 8 3 7 *` for a 2026-07-03 17:30 KST production-mode smoke.
+- Reason: Manual dispatch used dry-run settings and could not verify real scheduled Telegram publishing.
+- Alternatives considered: Manual workflow with real publish inputs; deleting DB dedupe records; adding a dedicated smoke message option.
+- Impact: Must restore normal production cron after the smoke result is known.
+
+## 2026-07-03: Keep auxiliary source outages quiet in user messages
+
+- Decision: Keep `partial_source_unavailable` visible in DB/CLI, but render user-facing fallback as a normal no-event message.
+- Reason: Ara Waterway can timeout from GitHub Actions, and repeated auxiliary outage messages degrade alert quality.
+- Alternatives considered: Exclude Ara Waterway entirely; show degraded-status messages in Telegram.
+- Impact: Operators can still inspect DB/CLI context, while users receive quieter no-event messages.
+
+## 2026-07-03: Separate source outage from true no-event
+
+- Decision: Add message context values such as `source_unavailable`, `partial_source_unavailable`, `no_event`, and `event_alert`.
+- Reason: A source outage should not be operationally indistinguishable from a true no-event result.
+- Alternatives considered: Treat all empty publishable event sets as no-event.
+- Impact: Run logs and workflow output now support post-run diagnosis.
+
+## 2026-07-03: Runtime sources exclude SPATIC
+
+- Decision: Runtime ingestion uses Hangang and Ara Waterway sources; SPATIC remains as reference/regression code only.
+- Reason: SPATIC was less bicycle-road specific and caused source reliability issues.
+- Alternatives considered: Keep SPATIC as a runtime source; add generic traffic sources.
+- Impact: Runtime relevance improves, but source coverage remains limited.
+
+## 2026-07-01: Separate migrations from scheduled runtime batches
+
+- Decision: Scheduled batches do not run Alembic migrations. Migrations run only in manual dispatch with `apply_migrations=true`.
+- Reason: Runtime batches should not fail because of schema migration issues.
+- Alternatives considered: Always run migrations before batch.
+- Impact: Operators must apply migrations intentionally when schema changes.
