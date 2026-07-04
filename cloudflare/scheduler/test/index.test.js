@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   buildWorkflowDispatchRequest,
+  handleRequest,
   triggerWorkflowDispatch,
 } from "../src/index.js";
 
@@ -52,4 +53,36 @@ test("triggerWorkflowDispatch throws when GitHub rejects the dispatch", async ()
     /GitHub workflow dispatch failed: 401 Bad credentials/,
   );
   assert.equal(fetchCalls.length, 1);
+});
+
+test("handleRequest runs dispatch for authorized smoke trigger", async () => {
+  const fetchCalls = [];
+  const okFetch = async (url, init) => {
+    fetchCalls.push({ url, init });
+    return {
+      ok: true,
+      text: async () => "",
+    };
+  };
+  const response = await handleRequest(
+    new Request("https://worker.example/__internal/run-scheduled", {
+      headers: { Authorization: "Bearer smoke-token" },
+    }),
+    { ...env, SMOKE_TRIGGER_TOKEN: "smoke-token" },
+    okFetch,
+  );
+
+  assert.equal(response.status, 202);
+  assert.equal(await response.text(), "scheduled dispatch accepted");
+  assert.equal(fetchCalls.length, 1);
+});
+
+test("handleRequest rejects smoke trigger without token", async () => {
+  const response = await handleRequest(
+    new Request("https://worker.example/__internal/run-scheduled"),
+    { ...env, SMOKE_TRIGGER_TOKEN: "smoke-token" },
+  );
+
+  assert.equal(response.status, 404);
+  assert.equal(await response.text(), "not found");
 });

@@ -11,10 +11,11 @@ Last updated: 2026-07-04
 - The Cloudflare Worker uses production cron `30 22 * * *`.
 - Cloudflare deployment is live at `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`.
 - Wrangler confirmed trigger deployment for `schedule: 30 22 * * *`.
-- `GITHUB_TOKEN` Worker secret is not set yet (`npx wrangler secret list` returned `[]`), so scheduled dispatch will fail until the secret is added.
+- `GITHUB_TOKEN` Worker secret is set (`npx wrangler secret list` returns `GITHUB_TOKEN`).
+- Authenticated Worker smoke endpoint created GitHub Actions run `28689723865`, which completed successfully.
 - The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
-- Need one Cloudflare-triggered `event=workflow_dispatch` run with:
+- Need one natural Cloudflare cron tick, not smoke endpoint, with:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
   - clear `TELEGRAM_STATUS`

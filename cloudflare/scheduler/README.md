@@ -46,6 +46,22 @@ npx wrangler secret list
 Expected output should include `GITHUB_TOKEN`. If it returns `[]`, scheduled
 dispatch will fail before reaching GitHub Actions.
 
+## Smoke Trigger Token
+
+The Worker also exposes an authenticated internal smoke endpoint for manually
+verifying the same GitHub dispatch path without waiting for the next cron tick:
+
+```text
+POST /__internal/run-scheduled
+Authorization: Bearer <SMOKE_TRIGGER_TOKEN>
+```
+
+Set `SMOKE_TRIGGER_TOKEN` as a Cloudflare Worker secret. Do not commit it.
+
+```powershell
+npx wrangler secret put SMOKE_TRIGGER_TOKEN
+```
+
 ## Dispatch Payload
 
 The Worker dispatches `.github/workflows/manual-batch.yml` on `main` with:
@@ -67,3 +83,7 @@ After deployment:
 2. Use the Cron Triggers test action, or wait for the next 07:30 KST run.
 3. Confirm a GitHub Actions `workflow_dispatch` run is created.
 4. Confirm the run logs include `TELEGRAM_STATUS=success`.
+
+For an immediate production smoke test, call the internal endpoint with the
+smoke token and confirm that GitHub Actions creates a new `workflow_dispatch`
+run.
