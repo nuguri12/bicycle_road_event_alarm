@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Weekend Cycling Event Alert Service as a Cloudflare-trigg
 
 ## Active Task
 
-Deploy and verify the Cloudflare Workers Cron scheduler for daily 07:30 KST production runs.
+Finish Cloudflare Workers Cron verification for daily 07:30 KST production runs.
 
 ## Current Runtime State
 
@@ -17,8 +17,13 @@ Deploy and verify the Cloudflare Workers Cron scheduler for daily 07:30 KST prod
 - Latest verified smoke run: GitHub Actions run `28660665074` on commit `2a0c825`
 - Workflow: `.github/workflows/manual-batch.yml`
 - External scheduler: `cloudflare/scheduler`
+- Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
+- Cloudflare Worker URL: `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`
+- Latest Cloudflare deployment version: `cf5cf648-ba18-49cf-9e12-8ea5a8cac282`
 - Production schedule: Cloudflare Cron `30 22 * * *`
 - Meaning: every day 07:30 KST
+- Cloudflare cron trigger deployment is confirmed by Wrangler.
+- Cloudflare Worker secret `GITHUB_TOKEN` is not set yet as of 2026-07-04 09:16 KST (`npx wrangler secret list` returned `[]`).
 - GitHub Actions native `schedule` is removed to avoid duplicate sends.
 - Temporary push smoke trigger has been removed after successful verification.
 - Cloudflare dispatches `workflow_dispatch` with real publish inputs:
@@ -54,11 +59,10 @@ Deploy and verify the Cloudflare Workers Cron scheduler for daily 07:30 KST prod
 
 ## Next Actions
 
-1. Deploy `cloudflare/scheduler` with Wrangler.
-2. Set Cloudflare Worker secret `GITHUB_TOKEN`.
-3. Trigger or wait for Cloudflare Cron and confirm GitHub creates a `workflow_dispatch` run.
-4. Confirm Telegram receives the scheduled production message.
-3. Check run logs for:
+1. Set Cloudflare Worker secret `GITHUB_TOKEN`.
+2. Trigger or wait for Cloudflare Cron and confirm GitHub creates a `workflow_dispatch` run.
+3. Confirm Telegram receives the scheduled production message.
+4. Check run logs for:
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_CONTEXT=<...>`
    - `TELEGRAM_STATUS=success` or a clear failure reason

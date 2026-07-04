@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 ## Must Resolve Soon
 
@@ -9,6 +9,9 @@ Last updated: 2026-07-03
 - Production-mode Telegram publishing was verified through push-based smoke run `28660665074`.
 - GitHub Actions native `schedule` was unreliable and is being replaced by Cloudflare Workers Cron.
 - The Cloudflare Worker uses production cron `30 22 * * *`.
+- Cloudflare deployment is live at `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`.
+- Wrangler confirmed trigger deployment for `schedule: 30 22 * * *`.
+- `GITHUB_TOKEN` Worker secret is not set yet (`npx wrangler secret list` returned `[]`), so scheduled dispatch will fail until the secret is added.
 - The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
 - The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
 - Need one Cloudflare-triggered `event=workflow_dispatch` run with:

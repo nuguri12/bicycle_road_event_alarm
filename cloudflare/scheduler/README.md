@@ -4,6 +4,12 @@ This Worker replaces GitHub Actions native `schedule` for production runs.
 Cloudflare Cron Triggers call the existing GitHub Actions `workflow_dispatch`
 entry point once per day.
 
+Current production URL:
+
+```text
+https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev
+```
+
 ## Schedule
 
 Cloudflare cron uses UTC.
@@ -30,6 +36,15 @@ npx wrangler login
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler deploy
 ```
+
+Verify that the secret exists before relying on cron:
+
+```powershell
+npx wrangler secret list
+```
+
+Expected output should include `GITHUB_TOKEN`. If it returns `[]`, scheduled
+dispatch will fail before reaching GitHub Actions.
 
 ## Dispatch Payload
 
