@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-07-03
+Last updated: 2026-07-05
 
 ## System Shape
 
@@ -14,6 +14,7 @@ public sources
   -> raw_events
   -> normalize_events --run-id
   -> normalized_events
+  -> KST same-day publish candidate filter
   -> generate_messages --run-id
   -> OpenAI or fallback message
   -> Telegram publisher
@@ -34,8 +35,8 @@ public sources
 Current runtime ingestion uses:
 
 - Hangang park events
-- Hangang park notices
-- Ara Waterway notices
+- Hangang park notices via Seoulboard JSON API (`bbsNo=5211`)
+- Ara Waterway notices via official K-water 경인아라뱃길 notice URL
 
 SPATIC parser code remains in the repository for reference/regression, but runtime ingestion no longer calls SPATIC.
 
@@ -59,7 +60,7 @@ SPATIC parser code remains in the repository for reference/regression, but runti
   - User-facing no-event message does not mention the auxiliary outage.
 - True no-event:
   - Ingest succeeds without source outage.
-  - No publishable normalized events are found.
+  - No KST same-day publishable normalized events are found.
   - A dated KST no-event fallback message is generated.
 
 ## Safety Defaults

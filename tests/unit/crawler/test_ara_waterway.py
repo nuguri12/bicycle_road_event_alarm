@@ -17,7 +17,7 @@ def test_parse_ara_waterway_notices_page_builds_notice_candidates() -> None:
     assert candidate.raw_title == "아라뱃길 자전거길 정비 작업 안내"
     assert candidate.raw_date_text == "2026-07-02"
     assert candidate.raw_location_text == "계양대교 인근 아라자전거길"
-    assert candidate.source_url == "https://www.waterway.or.kr/notice/3001"
+    assert candidate.source_url == "https://www.kwater.or.kr/notice/3001"
 
 
 def test_parse_ara_waterway_notices_page_ignores_unrelated_links() -> None:
@@ -34,4 +34,7 @@ def test_parse_ara_waterway_notices_page_ignores_unrelated_links() -> None:
 
 
 def test_ara_waterway_source_url_is_public_waterway_site() -> None:
-    assert ARA_WATERWAY_NOTICES_URL == "https://www.waterway.or.kr/"
+    assert (
+        ARA_WATERWAY_NOTICES_URL
+        == "https://www.kwater.or.kr/giwaterway/ara/bbs/BBSMSTR_000000000021/lst.do"
+    )

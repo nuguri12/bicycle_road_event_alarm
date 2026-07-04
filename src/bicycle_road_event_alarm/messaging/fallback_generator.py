@@ -24,7 +24,7 @@ def generate_fallback_message(
                 "모든 수집 소스에 접근하지 못했습니다."
             )
         else:
-            text = f"{발송시각} 기준 이번 주말 자전거 주의 이벤트가 없습니다."
+            text = f"{발송시각} 기준 오늘 자전거 주의 이벤트가 없습니다."
         return GeneratedMessage(
             text=text,
             source="fallback",
@@ -41,7 +41,7 @@ def generate_fallback_message(
             event.location_name,
         ),
     )
-    lines = ["이번 주말 자전거 주의 구간", ""]
+    lines = ["오늘 자전거 주의 구간", ""]
 
     for index, event in enumerate(sorted_events, start=1):
         lines.extend(_event_lines(index, event))

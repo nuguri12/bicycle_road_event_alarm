@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-03
+Last updated: 2026-07-05
 
 ## Purpose
 
@@ -12,15 +12,15 @@ This document is the handoff note for another local Codex session. It summarizes
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
 - Latest pushed commit before the cron failure fix: `ae6fa78 docs: add remaining risk opinion`
-- Current local working tree should be clean after the latest push, unless the next session has made changes
+- Current local working tree contains unpushed source-validation, same-day filtering, IDE interpreter, documentation, and test updates.
 
 ## Project Goal
 
-Weekend Cycling Event Alert Service.
+Daily Cycling Event Alert Service.
 
 The service collects public traffic-control and event information that may affect bicycle-road users, stores raw events, normalizes them, generates Korean alert messages, and publishes them to a Telegram channel.
 
-The runtime MVP sources are Hangang park events, Hangang park notices, and Ara Waterway notices. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
+The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
 ## Current Operational Status
 
@@ -52,7 +52,13 @@ Manual runs keep safe defaults:
 dry_run=true
 enable_telegram_publish=false
 force_fallback=false
+apply_migrations=false
 ```
+
+Latest natural production observation:
+
+- The 2026-07-05 07:31 KST Telegram no-event message was received from the Cloudflare-triggered scheduled path.
+- Local live-source verification after source parser updates found 19 raw candidates and 0 same-day publish candidates.
 
 ### Schedule Failure Diagnosis
 
@@ -109,7 +115,8 @@ Important behavior:
 - `ingest_raw_events` always emits `RUN_ID=<uuid>`.
 - `normalize_events --run-id` processes only raw events from the current ingest run.
 - `generate_messages --run-id` selects publishable events only from the current ingest run.
-- Empty publishable event sets generate a dated no-event message.
+- Empty publishable event sets generate a dated KST no-event message.
+- Publish candidates are limited to events active on the KST date when they were fetched.
 - Non-empty publish outcomes are recorded in `publish_attempts` for `success`, `failed`, and `skipped`.
 - Empty message skips are not recorded because they do not represent a publishable message.
 
@@ -165,8 +172,8 @@ Do not print or commit secret values.
 ### Raw Event Ingestion
 
 - Hangang park event fixture parser
-- Hangang park notice fixture parser
-- Ara Waterway notice fixture parser
+- Hangang park notice parser backed by Seoulboard JSON API (`https://seoulboard.seoul.go.kr/front/bbs.json?bbsNo=5211`)
+- Ara Waterway notice parser using K-water 경인아라뱃길 notice URL (`https://www.kwater.or.kr/giwaterway/ara/bbs/BBSMSTR_000000000021/lst.do`)
 - multi-source live ingestion
 - SPATIC parser retained but excluded from runtime ingestion
 - request timeout/retry wrapper
@@ -183,11 +190,13 @@ Do not print or commit secret values.
 
 - title cleanup
 - date/time parsing
+- full date-range parsing for same-day active checks
 - location detection
 - event type classification
 - cyclist impact classification
 - deterministic duplicate key
 - publish candidate flag
+- KST same-day publish candidate filtering
 - duplicate-aware normalized save
 - CLI: `python -m bicycle_road_event_alarm.cli.normalize_events`
 - run-scoped CLI option: `--run-id`
@@ -200,7 +209,7 @@ Do not print or commit secret values.
 - deterministic fallback generator
 - OpenAI-first message generation service
 - fallback on OpenAI errors or invalid output
-- no-event fallback message with generated date
+- no-event fallback message with generated KST date/time and "today" wording
 - CLI: `python -m bicycle_road_event_alarm.cli.generate_messages`
 - run-scoped CLI option: `--run-id`
 - fallback option: `--force-fallback`
@@ -288,16 +297,16 @@ Latest full local verification before this handoff:
 
 ```text
 python -m pytest -q
-66 passed
+85 passed
 
 python -m ruff check .
 All checks passed!
 
 python -m mypy src tests
-Success: no issues found in 63 source files
+Success: no issues found in 70 source files
 
 python -m black --check .
-66 files would be left unchanged
+73 files would be left unchanged
 
 python -m compileall src
 success
@@ -314,7 +323,7 @@ Remote verification after push:
 
 ## Operator Checks
 
-After this workflow hardening commit is pushed, check GitHub Actions:
+After the current local changes are pushed, check GitHub Actions:
 
 1. Open the repository Actions tab.
 2. Select `Manual Batch`.
@@ -325,7 +334,7 @@ After this workflow hardening commit is pushed, check GitHub Actions:
    - `RUN_ID=<uuid>`
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_SOURCE=openai` or `MESSAGE_SOURCE=fallback`
-   - `MESSAGE_EVENT_COUNT=<number>`
+   - `MESSAGE_EVENT_COUNT=<number>` where only same-day KST active events should count
    - `TELEGRAM_STATUS=success`, `failed`, or `skipped`
 
 Check Supabase:
@@ -347,17 +356,17 @@ limit 10;
 ## Known Risks
 
 - GitHub Actions native schedule was unreliable in this project.
-- Cloudflare Workers Cron now owns the production trigger.
-- Ara Waterway source URL precision still needs additional official-source validation.
-- Source outage and true no-event status are still not fully separated in the final user-facing message.
-- HTML parsers are fixture-driven and may require fixture updates when source pages change.
+- Cloudflare Workers Cron now owns the production trigger and produced a received 2026-07-05 07:31 KST Telegram no-event message.
+- Ara Waterway source now points to the official K-water notice page, but the parser still over-collects surrounding page text and needs row/detail-link refinement.
+- Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
+- HTML/API parsers are fixture-driven and may require fixture updates when source pages change.
 - Normalization rules are deterministic MVP heuristics.
 - Some older sprint docs may still contain mojibake text from earlier encoding issues.
 
 ## Recommended Next Tasks
 
-1. Push the workflow hardening commit if not already pushed.
-2. Run `workflow_dispatch` once with `apply_migrations=false` to confirm the runtime batch path no longer depends on migrations.
-3. Improve source outage vs true no-event messaging.
+1. Push the current source-validation, same-day filtering, docs, and test updates.
+2. Run or wait for one post-push production batch and confirm `MESSAGE_EVENT_COUNT` reflects only KST same-day active events.
+3. Refine the Ara Waterway parser row scope, source URLs, and location/section extraction.
 4. Consider recording a clearer run-level publish summary in `run_logs`.
-5. Add a more precise Ara Waterway official notice URL if one is confirmed.
+5. Continue monitoring no-event message frequency after the daily 07:30 KST schedule.

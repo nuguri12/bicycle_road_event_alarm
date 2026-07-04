@@ -4,12 +4,15 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from bicycle_road_event_alarm.db.models import RawEvent
 from bicycle_road_event_alarm.normalization.classifier import classify_event
 from bicycle_road_event_alarm.normalization.datetime import parse_event_datetime
 from bicycle_road_event_alarm.normalization.location import extract_location
 from bicycle_road_event_alarm.normalization.title import normalize_title
+
+KST = ZoneInfo("Asia/Seoul")
 
 
 @dataclass(frozen=True)
@@ -53,6 +56,9 @@ def normalize_raw_event(raw_event: RawEvent) -> NormalizedEventData:
         validation_status == "valid"
         and classification.publish_candidate_impact
         and classification.cyclist_impact_level in {"low", "medium", "high"}
+        and _is_active_on_fetched_kst_date(
+            start_datetime, parsed_datetime.end, raw_event.fetched_at
+        )
     )
 
     return NormalizedEventData(
@@ -78,6 +84,24 @@ def _validation_status(start_datetime: datetime | None, location_name: str | Non
     if location_name is None:
         return "needs_review"
     return "valid"
+
+
+def _is_active_on_fetched_kst_date(
+    start_datetime: datetime,
+    end_datetime: datetime | None,
+    fetched_at: datetime | None,
+) -> bool:
+    기준시각 = fetched_at or datetime.now(UTC)
+    if 기준시각.tzinfo is None:
+        기준시각 = 기준시각.replace(tzinfo=UTC)
+
+    target_date = 기준시각.astimezone(KST).date()
+    start_date = start_datetime.astimezone(KST).date()
+    if end_datetime is None:
+        return start_date == target_date
+
+    end_date = end_datetime.astimezone(KST).date()
+    return start_date <= target_date <= end_date
 
 
 # 중복 키 생성: 제목, 날짜, 장소, 지역을 낮은 변동성의 키로 정리합니다.

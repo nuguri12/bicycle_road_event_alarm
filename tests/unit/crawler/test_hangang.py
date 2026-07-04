@@ -26,32 +26,32 @@ def test_parse_hangang_events_page_builds_event_candidates() -> None:
 
 
 def test_parse_hangang_notices_page_builds_notice_candidates() -> None:
-    html = Path("tests/fixtures/crawler/hangang_notices_list.html").read_text(encoding="utf-8")
+    html = Path("tests/fixtures/crawler/hangang_notices_list.json").read_text(encoding="utf-8")
 
     candidates = parse_hangang_notices_page(html)
 
     assert len(candidates) == 1
     candidate = candidates[0]
     assert candidate.source_name == "한강공원 새소식"
-    assert candidate.source_url == "https://hangang.seoul.go.kr/www/bbsPost/30/view.do?postNo=2001"
-    assert candidate.raw_title == "주말 한강공원 자전거도로 일부 통제 안내"
+    assert (
+        candidate.source_url
+        == "https://hangang.seoul.go.kr/www/bbsPost/30/list.do?mid=608#view/457099"
+    )
+    assert candidate.raw_title == "2026년 한강공원 자전거도로 일부 통제 안내"
     assert candidate.raw_date_text == "2026-07-01"
     assert candidate.raw_location_text is None
 
 
-def test_parse_hangang_notices_page_ignores_unrelated_menu_links() -> None:
-    html = """
-    <html><body><ul>
-      <li><a href="/www/content/intro.do">한강공원 소개</a></li>
-      <li><a href="/www/bbsPost/30/view.do?postNo=2002">자전거도로 보수 공사 안내</a></li>
-    </ul></body></html>
-    """
+def test_parse_hangang_notices_page_ignores_unrelated_api_items() -> None:
+    html = Path("tests/fixtures/crawler/hangang_notices_list.json").read_text(encoding="utf-8")
 
     candidates = parse_hangang_notices_page(html)
 
-    assert [candidate.raw_title for candidate in candidates] == ["자전거도로 보수 공사 안내"]
+    assert [candidate.raw_title for candidate in candidates] == [
+        "2026년 한강공원 자전거도로 일부 통제 안내"
+    ]
 
 
 def test_hangang_source_urls_point_to_official_hangang_pages() -> None:
     assert HANGANG_EVENTS_URL == "https://hangang.seoul.go.kr/www/eventMng/list.do?mid=538"
-    assert HANGANG_NOTICES_URL == "https://hangang.seoul.go.kr/www/bbsPost/30/list.do?mid=608"
+    assert HANGANG_NOTICES_URL == "https://seoulboard.seoul.go.kr/front/bbs.json?bbsNo=5211"

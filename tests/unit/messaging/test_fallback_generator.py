@@ -52,7 +52,7 @@ def test_generate_fallback_message_includes_generated_date_for_empty_events() ->
     )
 
     assert result.status == "generated"
-    assert result.text == "2026-07-01 23:30 기준 이번 주말 자전거 주의 이벤트가 없습니다."
+    assert result.text == "2026-07-01 23:30 기준 오늘 자전거 주의 이벤트가 없습니다."
     assert result.event_count == 0
 
 
@@ -81,5 +81,5 @@ def test_generate_fallback_message_keeps_partial_outage_quiet_for_users() -> Non
     )
 
     assert result.status == "generated"
-    assert result.text == "2026-07-01 23:30 기준 이번 주말 자전거 주의 이벤트가 없습니다."
+    assert result.text == "2026-07-01 23:30 기준 오늘 자전거 주의 이벤트가 없습니다."
     assert result.event_count == 0

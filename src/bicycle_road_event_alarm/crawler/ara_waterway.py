@@ -11,7 +11,7 @@ from bicycle_road_event_alarm.crawler.page_parser import (
 )
 from bicycle_road_event_alarm.crawler.raw_event import RawEventCandidate
 
-ARA_WATERWAY_NOTICES_URL = "https://www.waterway.or.kr/"
+ARA_WATERWAY_NOTICES_URL = "https://www.kwater.or.kr/giwaterway/ara/bbs/BBSMSTR_000000000021/lst.do"
 
 
 # 아라뱃길 공지 파서: 공식/공개 페이지의 게시판형 링크를 원문 후보로 변환합니다.

@@ -16,6 +16,12 @@ DATE_PATTERN = re.compile(
     r"(?:\s+(?P<start_hour>\d{1,2}):(?P<start_minute>\d{2}))?"
     r"(?:\s*~\s*(?P<end_hour>\d{1,2}):(?P<end_minute>\d{2}))?"
 )
+DATE_RANGE_PATTERN = re.compile(
+    r"(?P<start_year>\d{4})[.\-/](?P<start_month>\d{1,2})[.\-/](?P<start_day>\d{1,2})"
+    r"(?:\([^)]+\))?"
+    r"\s*~\s*"
+    r"(?P<end_year>\d{4})[.\-/](?P<end_month>\d{1,2})[.\-/](?P<end_day>\d{1,2})"
+)
 
 
 # 날짜 추출: 원문 날짜, 본문, 제목 순서로 명확한 숫자형 날짜를 찾습니다.
@@ -29,11 +35,34 @@ def parse_event_datetime(
     for source_text in (raw_date_text, raw_body, raw_title):
         if source_text is None:
             continue
+        range_match = DATE_RANGE_PATTERN.search(source_text)
+        if range_match is not None:
+            return _build_date_range(range_match)
         match = DATE_PATTERN.search(source_text)
         if match is None:
             continue
         return _build_datetime(match)
     return ParsedEventDateTime(start=None, end=None)
+
+
+def _build_date_range(match: re.Match[str]) -> ParsedEventDateTime:
+    start = datetime(
+        int(match.group("start_year")),
+        int(match.group("start_month")),
+        int(match.group("start_day")),
+        0,
+        0,
+        tzinfo=UTC,
+    )
+    end = datetime(
+        int(match.group("end_year")),
+        int(match.group("end_month")),
+        int(match.group("end_day")),
+        23,
+        59,
+        tzinfo=UTC,
+    )
+    return ParsedEventDateTime(start=start, end=end)
 
 
 # datetime 생성: 시간 정보가 없으면 자정 시작으로 보수적으로 저장합니다.

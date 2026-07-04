@@ -19,6 +19,15 @@ def test_parse_event_datetime_extracts_korean_numeric_range() -> None:
     assert result.end == datetime(2026, 7, 4, 12, 0, tzinfo=UTC)
 
 
+def test_parse_event_datetime_extracts_full_date_range() -> None:
+    fetched_at = datetime(2026, 6, 30, tzinfo=UTC)
+
+    result = parse_event_datetime("2026-07-01(수) ~ 2026-07-05(일)", None, None, fetched_at)
+
+    assert result.start == datetime(2026, 7, 1, 0, 0, tzinfo=UTC)
+    assert result.end == datetime(2026, 7, 5, 23, 59, tzinfo=UTC)
+
+
 def test_extract_location_prefers_raw_location_text() -> None:
     result = extract_location("잠실대교 남단 ~ 뚝섬한강공원", None, None)
 

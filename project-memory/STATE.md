@@ -1,14 +1,14 @@
 # State
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ## Current Objective
 
-Operate and verify the Weekend Cycling Event Alert Service as a Cloudflare-triggered GitHub Actions batch that collects bicycle-impacting public events, normalizes them, generates a Korean Telegram message, and publishes to a private Telegram channel.
+Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-triggered GitHub Actions batch that collects bicycle-impacting public events, normalizes same-day active events, generates a Korean Telegram message, and publishes to a private Telegram channel.
 
 ## Active Task
 
-Finish Cloudflare Workers Cron verification for daily 07:30 KST production runs.
+Prepare and push the source-validation, same-day filtering, documentation, and test updates; then verify the next daily 07:30 KST production run.
 
 ## Current Runtime State
 
@@ -31,6 +31,7 @@ Finish Cloudflare Workers Cron verification for daily 07:30 KST production runs.
 - Cloudflare dispatches `workflow_dispatch` with real publish inputs:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
+- Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -39,10 +40,11 @@ Finish Cloudflare Workers Cron verification for daily 07:30 KST production runs.
 
 ## Implemented Runtime Behavior
 
-- Runtime sources are Hangang events, Hangang notices, and Ara Waterway notices.
+- Runtime sources are Hangang events, Hangang notices via Seoulboard JSON API, and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL.
 - SPATIC code remains for regression/reference but is not called by runtime ingestion.
 - Ingest emits `RUN_ID=<uuid>`.
 - Normalize and message generation are scoped to that run id.
+- Publish candidates are limited to events active on the KST date when they were fetched.
 - Source outage and true no-event are separated in CLI/DB message context.
 - Partial source outage is recorded in DB and CLI, but user-facing no-event text stays quiet.
 - Empty fallback messages include KST send date and time.
@@ -57,16 +59,19 @@ Finish Cloudflare Workers Cron verification for daily 07:30 KST production runs.
 - The push-based production smoke succeeded at 2026-07-03 21:31 KST with `TELEGRAM_STATUS=success` and `TELEGRAM_MESSAGE_ID=11`.
 - The Cloudflare Worker authenticated smoke endpoint returned `202 scheduled dispatch accepted` at 2026-07-04 09:46 KST and created GitHub Actions run `28689723865`.
 - Run `28689723865` completed successfully at 2026-07-04 09:47 KST.
-- Ara Waterway often times out from GitHub Actions runners.
+- The 2026-07-05 07:31 KST natural Cloudflare-triggered Telegram message was received and said there were no today cycling caution events.
+- Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
+- Ara Waterway now uses an official K-water notice URL, but parser precision still needs improvement.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions
 
-1. Confirm Telegram received the 2026-07-04 09:46 KST smoke message.
-2. Wait for the next 07:30 KST Cloudflare cron tick and confirm it creates a `workflow_dispatch` run without using the smoke endpoint.
+1. Push the current local source-validation, same-day filtering, docs, and test updates.
+2. Wait for the next 07:30 KST Cloudflare cron tick after push or run `workflow_dispatch` manually with safe/intentional inputs.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_CONTEXT=<...>`
+   - `MESSAGE_EVENT_COUNT=<number>` reflecting only KST same-day active events
    - `TELEGRAM_STATUS=success` or a clear failure reason
-4. If Cloudflare dispatch fails, check Worker logs and GitHub token Actions write permission.
+4. Refine Ara Waterway parser row scope, detail URLs, and location/section extraction.

@@ -1,35 +1,34 @@
 # Open Issues
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ## Must Resolve Soon
 
-### Verify Cloudflare scheduled production Telegram publish
+### Verify post-push same-day production semantics
 
 - Production-mode Telegram publishing was verified through push-based smoke run `28660665074`.
-- GitHub Actions native `schedule` was unreliable and is being replaced by Cloudflare Workers Cron.
+- GitHub Actions native `schedule` was unreliable and was replaced by Cloudflare Workers Cron.
 - The Cloudflare Worker uses production cron `30 22 * * *`.
 - Cloudflare deployment is live at `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`.
 - Wrangler confirmed trigger deployment for `schedule: 30 22 * * *`.
 - `GITHUB_TOKEN` Worker secret is set (`npx wrangler secret list` returns `GITHUB_TOKEN`).
 - Authenticated Worker smoke endpoint created GitHub Actions run `28689723865`, which completed successfully.
-- The 2026-07-03 19:00 KST one-off schedule did not create a GitHub Actions run.
-- The 2026-07-03 21:20 KST one-off schedule did not create a GitHub Actions run.
-- Need one natural Cloudflare cron tick, not smoke endpoint, with:
+- The 2026-07-05 07:31 KST natural Cloudflare-triggered Telegram no-event message was received.
+- After pushing the current local changes, verify one production run where:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
-  - clear `TELEGRAM_STATUS`
-- Check both GitHub Actions logs and Telegram channel.
+  - `MESSAGE_EVENT_COUNT` reflects only events active on the KST fetch date.
 
 ## Operational Risks
 
-### Ara Waterway timeout
+### Ara Waterway parser precision
 
-- Ara Waterway often times out from GitHub Actions runners.
+- Ara Waterway now uses official K-water 경인아라뱃길 notice URL.
+- Live parsing still over-collects surrounding page text and does not reliably extract detail URLs or location/section text.
 - Current behavior:
   - DB/CLI records `partial_source_unavailable`.
   - User-facing message remains quiet no-event.
-- Future option: find a more precise official Ara Waterway notice URL or replace the source.
+- Next step: narrow notice row selection and extract route/section text such as bridge-to-bridge segments.
 
 ### No-event dedupe weakened by send time
 
@@ -42,7 +41,7 @@ Last updated: 2026-07-04
 
 ### Older docs may be stale
 
-- `README.md` and `docs/handoff-current-status.md` may not reflect the temporary cron or the latest message behavior.
+- Older sprint docs may still describe weekend-oriented behavior or SPATIC-era source choices.
 - Some older docs contain mojibake.
 - Prefer `project-memory/` for current operational context.
 

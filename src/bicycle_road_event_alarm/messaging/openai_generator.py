@@ -20,7 +20,7 @@ class OpenAIClient(Protocol):
 
 
 SYSTEM_INSTRUCTIONS = (
-    "You write concise Korean weekend cycling alerts. "
+    "You write concise Korean same-day cycling alerts. "
     "Use only the structured event data provided. "
     "Do not invent dates, locations, routes, or URLs. "
     "Do not provide personalized route planning. "

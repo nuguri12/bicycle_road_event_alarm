@@ -1,6 +1,20 @@
 # Decisions
 
-Last updated: 2026-07-03
+Last updated: 2026-07-05
+
+## 2026-07-05: Limit publish candidates to same-day active events
+
+- Decision: Treat only events active on the KST fetch date as publish candidates.
+- Reason: A daily 07:30 KST Telegram alert is only useful when it reflects same-day riding impact; future, past, or broad monthly notices should not create a daily alert.
+- Alternatives considered: Keep weekend-oriented alerts; filter only at message generation time.
+- Impact: Normalization now keeps raw/normalized evidence but only marks same-day active events as publishable. Empty fallback copy now says "오늘 자전거 주의 이벤트가 없습니다."
+
+## 2026-07-05: Update official runtime source endpoints
+
+- Decision: Use Seoulboard JSON API `https://seoulboard.seoul.go.kr/front/bbs.json?bbsNo=5211` for Hangang notices and official K-water 경인아라뱃길 notice URL for Ara Waterway notices.
+- Reason: Hangang notice HTML did not expose static post links, while the Seoulboard API returns the actual notice list. The previous Ara Waterway root URL was too broad.
+- Alternatives considered: Disable Hangang notices; keep Ara root page; search for unrelated traffic feeds.
+- Impact: Source relevance improves, but Ara Waterway parsing still needs row/detail/location refinement.
 
 ## 2026-07-03: Use project memory as the first context layer
 
