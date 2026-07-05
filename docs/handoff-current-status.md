@@ -11,8 +11,8 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest pushed commit before the cron failure fix: `ae6fa78 docs: add remaining risk opinion`
-- Current local working tree contains unpushed source-validation, same-day filtering, IDE interpreter, documentation, and test updates.
+- Latest pushed commit before this handoff: `a7fc0a3 Update sources and same-day alert filtering`
+- Current local working tree contains unpushed Ara Waterway parser precision, documentation, and test updates.
 
 ## Project Goal
 
@@ -58,7 +58,7 @@ apply_migrations=false
 Latest natural production observation:
 
 - The 2026-07-05 07:31 KST Telegram no-event message was received from the Cloudflare-triggered scheduled path.
-- Local live-source verification after source parser updates found 19 raw candidates and 0 same-day publish candidates.
+- Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
 
@@ -174,6 +174,10 @@ Do not print or commit secret values.
 - Hangang park event fixture parser
 - Hangang park notice parser backed by Seoulboard JSON API (`https://seoulboard.seoul.go.kr/front/bbs.json?bbsNo=5211`)
 - Ara Waterway notice parser using K-water 경인아라뱃길 notice URL (`https://www.kwater.or.kr/giwaterway/ara/bbs/BBSMSTR_000000000021/lst.do`)
+- Ara Waterway notice row selector narrowed to board-list rows with `.ntt_sj`.
+- Ara Waterway detail URLs are built from `bbsMstrView('<id>')` onclick handlers.
+- Ara Waterway location extraction now uses explicit place fields, title parenthetical bridge/section text, and detail-page `통제 구간` body lines.
+- Multi-source ingestion enriches Ara Waterway candidates by fetching each parsed detail URL; detail fetch failures leave the list candidate intact.
 - multi-source live ingestion
 - SPATIC parser retained but excluded from runtime ingestion
 - request timeout/retry wrapper
@@ -297,7 +301,7 @@ Latest full local verification before this handoff:
 
 ```text
 python -m pytest -q
-85 passed
+87 passed
 
 python -m ruff check .
 All checks passed!
@@ -308,8 +312,17 @@ Success: no issues found in 70 source files
 python -m black --check .
 73 files would be left unchanged
 
-python -m compileall src
+python -m compileall -q src tests
 success
+```
+
+Ara Waterway local smoke against saved K-water snapshots:
+
+```text
+candidate_count 13
+failures {}
+first_location_enriched True
+calls 14
 ```
 
 Remote verification after push:
@@ -357,7 +370,8 @@ limit 10;
 
 - GitHub Actions native schedule was unreliable in this project.
 - Cloudflare Workers Cron now owns the production trigger and produced a received 2026-07-05 07:31 KST Telegram no-event message.
-- Ara Waterway source now points to the official K-water notice page, but the parser still over-collects surrounding page text and needs row/detail-link refinement.
+- Ara Waterway parser precision has been improved for the current K-water board DOM, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
+- Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
 - HTML/API parsers are fixture-driven and may require fixture updates when source pages change.
 - Normalization rules are deterministic MVP heuristics.
@@ -365,8 +379,8 @@ limit 10;
 
 ## Recommended Next Tasks
 
-1. Push the current source-validation, same-day filtering, docs, and test updates.
+1. Push the current Ara Waterway parser precision, docs, and test updates.
 2. Run or wait for one post-push production batch and confirm `MESSAGE_EVENT_COUNT` reflects only KST same-day active events.
-3. Refine the Ara Waterway parser row scope, source URLs, and location/section extraction.
+3. Review the next production run logs to confirm Ara Waterway detail enrichment does not introduce source timeouts.
 4. Consider recording a clearer run-level publish summary in `run_logs`.
 5. Continue monitoring no-event message frequency after the daily 07:30 KST schedule.

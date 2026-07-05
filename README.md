@@ -225,6 +225,7 @@ DRY_RUN=false
 - 한강공원 새소식 Seoulboard JSON API 기반 파서
 - 아라뱃길 공지 fixture 기반 파서
 - 아라뱃길 공식 K-water 경인아라뱃길 공지 URL 반영
+- 아라뱃길 공지 행 범위, 상세 URL, 제목/본문 기반 장소·구간 추출 보강
 - 다중 소스 live 수집 CLI
 - `raw_events` 저장
 - `normalized_events` 정규화 및 저장
@@ -244,7 +245,7 @@ DRY_RUN=false
 남은 작업:
 
 - 필요 시 수동 실행에서 `apply_migrations=true`로 DB migration 적용
-- 아라뱃길 공지 행 범위, 상세 URL, 장소/구간 추출 정밀도 보강
+- 다음 운영 run에서 아라뱃길 상세 구간 보강 결과와 `MESSAGE_EVENT_COUNT` 확인
 - 전체 소스 장애와 실제 이벤트 없음 상태의 운영 관찰성 보강
 - 운영 모니터링 문서와 알림 기준 보강
 

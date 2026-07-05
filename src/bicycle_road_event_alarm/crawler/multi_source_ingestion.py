@@ -6,6 +6,7 @@ from typing import Protocol
 
 from bicycle_road_event_alarm.crawler.ara_waterway import (
     ARA_WATERWAY_NOTICES_URL,
+    enrich_ara_waterway_candidates_with_details,
     parse_ara_waterway_notices_page,
 )
 from bicycle_road_event_alarm.crawler.hangang import (
@@ -27,6 +28,10 @@ class SourceDefinition:
     url: str
     parser: Callable[[str], list[RawEventCandidate]]
     timeout_seconds: int | None = None
+    enricher: (
+        Callable[[TextHttpClient, list[RawEventCandidate], int | None], list[RawEventCandidate]]
+        | None
+    ) = None
 
 
 @dataclass(frozen=True)
@@ -37,6 +42,18 @@ class MultiSourceIngestionResult:
     @property
     def all_sources_failed(self) -> bool:
         return len(self.failures) > 0 and len(self.candidates) == 0
+
+
+def _enrich_ara_waterway_candidates(
+    http_client: TextHttpClient,
+    candidates: list[RawEventCandidate],
+    timeout_seconds: int | None,
+) -> list[RawEventCandidate]:
+    return enrich_ara_waterway_candidates_with_details(
+        candidates,
+        http_client,
+        timeout_seconds=timeout_seconds,
+    )
 
 
 DEFAULT_SOURCES = (
@@ -55,6 +72,7 @@ DEFAULT_SOURCES = (
         url=ARA_WATERWAY_NOTICES_URL,
         parser=parse_ara_waterway_notices_page,
         timeout_seconds=10,
+        enricher=_enrich_ara_waterway_candidates,
     ),
 )
 
@@ -71,7 +89,14 @@ def fetch_all_source_candidates(
     for source in sources:
         try:
             html = http_client.get_text(source.url, timeout_seconds=source.timeout_seconds)
-            candidates.extend(source.parser(html))
+            source_candidates = source.parser(html)
+            if source.enricher is not None:
+                source_candidates = source.enricher(
+                    http_client,
+                    source_candidates,
+                    source.timeout_seconds,
+                )
+            candidates.extend(source_candidates)
         except Exception as exc:
             failures[source.name] = str(exc)
 
