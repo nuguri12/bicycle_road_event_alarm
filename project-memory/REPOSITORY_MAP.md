@@ -59,6 +59,8 @@ Last updated: 2026-07-06
 - Current state: `project-memory/STATE.md`
 - Open follow-ups: `project-memory/OPEN_ISSUES.md`
 - Incident ledger: `project-memory/INCIDENTS.md`
-- Sprint docs: `docs/sprint*/`
+- Archived sprint docs: `docs/archive/sprints/sprint*/`
 
-Some older docs may be stale or contain mojibake. Prefer this `project-memory/` directory for current navigation and state.
+Archived sprint docs are historical DDD/planning artifacts. Do not use them as the current source of truth without verifying against `project-memory/`, source code, tests, and runtime docs.
+
+Some older archived docs may be stale or contain mojibake. Prefer this `project-memory/` directory for current navigation and state.

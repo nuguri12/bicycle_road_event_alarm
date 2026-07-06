@@ -195,4 +195,4 @@ DRY_RUN=false
 - 미해결 이슈는 `project-memory/OPEN_ISSUES.md`에 기록합니다.
 - 장애, 반복 실수, 운영상 재발 방지 교훈은 `project-memory/INCIDENTS.md`에 기록합니다.
 - 상세 handoff는 `docs/handoff-current-status.md`를 참고합니다.
-- 오래된 sprint 문서는 현재 운영 상태와 다를 수 있으므로 project memory를 우선합니다.
+- 오래된 sprint 문서는 `docs/archive/sprints/`에 보관합니다. 현재 운영 상태와 다를 수 있으므로 project memory를 우선합니다.
