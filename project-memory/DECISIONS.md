@@ -1,6 +1,13 @@
 # Decisions
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
+
+## 2026-07-06: Disable psycopg prepared statements for Supabase pooler
+
+- Decision: Pass `connect_args={"prepare_threshold": None}` when creating the SQLAlchemy psycopg engine.
+- Reason: The 2026-07-06 07:30 KST production run failed in normalization with `psycopg.errors.DuplicatePreparedStatement: prepared statement "_pg3_0" already exists`.
+- Alternatives considered: Switch Supabase connection mode; retry failed jobs manually; use a new DB connection per query.
+- Impact: Short-lived GitHub Actions batch steps avoid prepared statement name collisions through the Supabase transaction pooler.
 
 ## 2026-07-05: Limit publish candidates to same-day active events
 

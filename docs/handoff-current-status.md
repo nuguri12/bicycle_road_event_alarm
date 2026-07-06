@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 ## Purpose
 
@@ -11,8 +11,8 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest pushed commit before this handoff: `a7fc0a3 Update sources and same-day alert filtering`
-- Current local working tree contains unpushed Ara Waterway parser precision, documentation, and test updates.
+- Latest pushed commit before this handoff: `e9ee3a8 fix: remove pinned vscode interpreter`
+- Current local working tree contains a prepared-statement fix for the 2026-07-06 production normalization failure.
 
 ## Project Goal
 
@@ -58,6 +58,15 @@ apply_migrations=false
 Latest natural production observation:
 
 - The 2026-07-05 07:31 KST Telegram no-event message was received from the Cloudflare-triggered scheduled path.
+- The 2026-07-06 07:30 KST Cloudflare-triggered run did execute, but failed before Telegram publishing.
+  - Ingest succeeded.
+  - `RUN_ID=7b01d78c-3816-472b-856b-4eafcbe28ab1`
+  - `RAW_EVENTS_SAVED=16`
+  - Normalization failed with `psycopg.errors.DuplicatePreparedStatement: prepared statement "_pg3_0" already exists`.
+  - Root cause: psycopg prepared statement reuse conflicts with the Supabase transaction pooler.
+  - Fix: SQLAlchemy engine now passes `connect_args={"prepare_threshold": None}` to disable psycopg prepared statements.
+  - Local verification against the failed run succeeded with `NORMALIZED_EVENTS_SAVED=16`.
+  - Safe dry-run message generation then produced `MESSAGE_STATUS=generated`, `MESSAGE_CONTEXT=no_event`, and `TELEGRAM_STATUS=skipped`.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -159,6 +168,7 @@ Do not print or commit secret values.
 ### Supabase DB Setup
 
 - SQLAlchemy engine/session helpers
+- SQLAlchemy psycopg engine disables prepared statements for Supabase transaction pooler compatibility.
 - DB health check
 - ORM models:
   - `run_logs`
@@ -379,7 +389,7 @@ limit 10;
 
 ## Recommended Next Tasks
 
-1. Push the current Ara Waterway parser precision, docs, and test updates.
+1. Push the prepared-statement fix.
 2. Run or wait for one post-push production batch and confirm `MESSAGE_EVENT_COUNT` reflects only KST same-day active events.
 3. Review the next production run logs to confirm Ara Waterway detail enrichment does not introduce source timeouts.
 4. Consider recording a clearer run-level publish summary in `run_logs`.

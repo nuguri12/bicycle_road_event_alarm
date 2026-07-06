@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 ## Current Objective
 
@@ -15,6 +15,7 @@ Prepare and push the source-validation, same-day filtering, documentation, and t
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`
 - Latest verified Cloudflare Worker smoke run: GitHub Actions run `28689723865` on commit `6b519ba`
+- Latest production incident: 2026-07-06 07:30 KST Cloudflare-triggered run reached ingest, then failed in normalization with psycopg `DuplicatePreparedStatement`.
 - Workflow: `.github/workflows/manual-batch.yml`
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
@@ -60,6 +61,11 @@ Prepare and push the source-validation, same-day filtering, documentation, and t
 - The Cloudflare Worker authenticated smoke endpoint returned `202 scheduled dispatch accepted` at 2026-07-04 09:46 KST and created GitHub Actions run `28689723865`.
 - Run `28689723865` completed successfully at 2026-07-04 09:47 KST.
 - The 2026-07-05 07:31 KST natural Cloudflare-triggered Telegram message was received and said there were no today cycling caution events.
+- The 2026-07-06 07:30 KST Cloudflare-triggered run did execute, saved 16 raw events, then failed before Telegram in `normalize_events`.
+- Root cause: Supabase transaction pooler reused a server connection where psycopg prepared statement `_pg3_0` already existed.
+- Local verification against failed run `7b01d78c-3816-472b-856b-4eafcbe28ab1` succeeded after disabling psycopg prepared statements:
+  - `NORMALIZED_EVENTS_SAVED=16`
+  - dry-run message generation produced `MESSAGE_CONTEXT=no_event`
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
 - Ara Waterway now uses an official K-water notice URL, but parser precision still needs improvement.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
@@ -67,7 +73,7 @@ Prepare and push the source-validation, same-day filtering, documentation, and t
 
 ## Next Actions
 
-1. Push the current local source-validation, same-day filtering, docs, and test updates.
+1. Push the prepared-statement fix that disables psycopg prepared statements for Supabase pooler connections.
 2. Wait for the next 07:30 KST Cloudflare cron tick after push or run `workflow_dispatch` manually with safe/intentional inputs.
 3. Check run logs for:
    - `MESSAGE_STATUS=generated`

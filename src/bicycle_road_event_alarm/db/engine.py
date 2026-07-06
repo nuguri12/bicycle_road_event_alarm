@@ -24,7 +24,13 @@ def create_engine_from_settings(settings: AppSettings) -> Engine:
     if settings.supabase_database_url is None:
         raise ValueError("SUPABASE_DATABASE_URL is required to create a database engine")
 
-    return create_engine(normalize_database_url(settings.supabase_database_url), pool_pre_ping=True)
+    return create_engine(
+        normalize_database_url(settings.supabase_database_url),
+        pool_pre_ping=True,
+        # Supabase transaction pooler can reuse server connections across clients.
+        # psycopg prepared statement names may then collide between short-lived batch steps.
+        connect_args={"prepare_threshold": None},
+    )
 
 
 # 세션 팩토리: 배치 작업과 테스트에서 동일한 방식으로 DB 세션을 생성합니다.
