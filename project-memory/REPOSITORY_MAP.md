@@ -1,6 +1,6 @@
 # Repository Map
 
-Last updated: 2026-07-03
+Last updated: 2026-07-06
 
 ## Entry Points
 
@@ -56,6 +56,9 @@ Last updated: 2026-07-03
 - Main README: `README.md`
 - Previous handoff: `docs/handoff-current-status.md`
 - Risk review: `docs/remaining-risk-opinion.md`
+- Current state: `project-memory/STATE.md`
+- Open follow-ups: `project-memory/OPEN_ISSUES.md`
+- Incident ledger: `project-memory/INCIDENTS.md`
 - Sprint docs: `docs/sprint*/`
 
 Some older docs may be stale or contain mojibake. Prefer this `project-memory/` directory for current navigation and state.

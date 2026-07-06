@@ -37,7 +37,7 @@ on:
           - "false"
           - "true"
 
-# 중복 실행 방지: 같은 브랜치에서 수동/예약 배치가 겹치면 순차 실행합니다.
+# 중복 실행 방지: 같은 브랜치의 수동/예약 배치가 겹치면 순차 실행합니다.
 concurrency:
   group: manual-batch-${{ github.ref }}
   cancel-in-progress: false
@@ -87,7 +87,7 @@ jobs:
       - name: Compile sources
         run: python -m compileall src
 
-      # DB 스키마 반영: 예약 실행에서는 운영 배치와 배포 작업을 분리합니다.
+      # DB 스키마 반영: 운영 배치와 배포 작업을 분리하기 위해 수동 선택 시에만 실행합니다.
       - name: Apply database migrations
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.apply_migrations == 'true' }}
         run: python -m alembic upgrade head
@@ -108,7 +108,7 @@ jobs:
       - name: Normalize events
         run: python -m bicycle_road_event_alarm.cli.normalize_events --run-id "$BATCH_RUN_ID"
 
-      # 메시지 생성 및 텔레그램 발송
+      # 메시지 생성 및 Telegram 발송
       - name: Generate and publish message
         run: |
           if [ "${{ github.event_name == 'workflow_dispatch' && inputs.force_fallback == 'true' }}" = "true" ]; then

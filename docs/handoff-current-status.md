@@ -11,8 +11,8 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest pushed commit before this handoff: `e9ee3a8 fix: remove pinned vscode interpreter`
-- Current local working tree contains a prepared-statement fix for the 2026-07-06 production normalization failure.
+- Latest runtime fix in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility.
+- Current local working tree may contain documentation updates; check `git status --short` before editing.
 
 ## Project Goal
 
@@ -307,11 +307,11 @@ python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
 
 ## Latest Verification Baseline
 
-Latest full local verification before this handoff:
+Latest full local verification after the prepared-statement fix:
 
 ```text
 python -m pytest -q
-87 passed
+88 passed
 
 python -m ruff check .
 All checks passed!
@@ -324,6 +324,9 @@ python -m black --check .
 
 python -m compileall -q src tests
 success
+
+npm test
+4 passed
 ```
 
 Ara Waterway local smoke against saved K-water snapshots:
@@ -389,8 +392,8 @@ limit 10;
 
 ## Recommended Next Tasks
 
-1. Push the prepared-statement fix.
-2. Run or wait for one post-push production batch and confirm `MESSAGE_EVENT_COUNT` reflects only KST same-day active events.
+1. Run or wait for one post-fix production batch and confirm `MESSAGE_EVENT_COUNT` reflects only KST same-day active events.
+2. Confirm the next production run reaches `TELEGRAM_STATUS=success` or records a clear failure reason.
 3. Review the next production run logs to confirm Ara Waterway detail enrichment does not introduce source timeouts.
 4. Consider recording a clearer run-level publish summary in `run_logs`.
 5. Continue monitoring no-event message frequency after the daily 07:30 KST schedule.

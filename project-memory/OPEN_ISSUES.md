@@ -1,10 +1,10 @@
 # Open Issues
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 ## Must Resolve Soon
 
-### Verify post-push same-day production semantics
+### Verify next production run after Supabase pooler fix
 
 - Production-mode Telegram publishing was verified through push-based smoke run `28660665074`.
 - GitHub Actions native `schedule` was unreliable and was replaced by Cloudflare Workers Cron.
@@ -14,10 +14,20 @@ Last updated: 2026-07-05
 - `GITHUB_TOKEN` Worker secret is set (`npx wrangler secret list` returns `GITHUB_TOKEN`).
 - Authenticated Worker smoke endpoint created GitHub Actions run `28689723865`, which completed successfully.
 - The 2026-07-05 07:31 KST natural Cloudflare-triggered Telegram no-event message was received.
-- After pushing the current local changes, verify one production run where:
+- The 2026-07-06 07:30 KST natural Cloudflare-triggered run executed but failed during normalization with psycopg `DuplicatePreparedStatement`.
+- The code now disables psycopg prepared statements for Supabase transaction pooler compatibility.
+- Verify the next production run where:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
+  - normalization completes without `DuplicatePreparedStatement`
   - `MESSAGE_EVENT_COUNT` reflects only events active on the KST fetch date.
+  - `TELEGRAM_STATUS=success` or a clear production failure reason is visible.
+
+### Confirm incident ledger adoption
+
+- `project-memory/INCIDENTS.md` was added to preserve resolved operational incidents and repeated debugging lessons.
+- Keep unresolved follow-ups in this file.
+- Move only resolved, durable incident history to `INCIDENTS.md`.
 
 ## Operational Risks
 

@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-Prepare and push the source-validation, same-day filtering, documentation, and test updates; then verify the next daily 07:30 KST production run.
+Keep project memory and handoff documents aligned with the current Cloudflare-triggered production state, then verify the next daily 07:30 KST production run after the Supabase pooler prepared-statement fix.
 
 ## Current Runtime State
 
@@ -73,11 +73,11 @@ Prepare and push the source-validation, same-day filtering, documentation, and t
 
 ## Next Actions
 
-1. Push the prepared-statement fix that disables psycopg prepared statements for Supabase pooler connections.
-2. Wait for the next 07:30 KST Cloudflare cron tick after push or run `workflow_dispatch` manually with safe/intentional inputs.
-3. Check run logs for:
+1. Wait for the next 07:30 KST Cloudflare cron tick after the prepared-statement fix, or run `workflow_dispatch` manually with safe/intentional inputs.
+2. Check run logs for:
    - `MESSAGE_STATUS=generated`
    - `MESSAGE_CONTEXT=<...>`
    - `MESSAGE_EVENT_COUNT=<number>` reflecting only KST same-day active events
    - `TELEGRAM_STATUS=success` or a clear failure reason
+3. Confirm whether the 2026-07-06 `DuplicatePreparedStatement` incident is fully resolved in production.
 4. Refine Ara Waterway parser row scope, detail URLs, and location/section extraction.
