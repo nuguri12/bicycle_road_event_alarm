@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 ## Current Objective
 
@@ -8,14 +8,14 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-Keep project memory and handoff documents aligned with the current Cloudflare-triggered production state, then verify the next daily 07:30 KST production run after the Supabase pooler prepared-statement fix.
+Observe daily 07:30 KST production runs for messaging reliability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`
 - Latest verified Cloudflare Worker smoke run: GitHub Actions run `28689723865` on commit `6b519ba`
-- Latest production incident: 2026-07-06 07:30 KST Cloudflare-triggered run reached ingest, then failed in normalization with psycopg `DuplicatePreparedStatement`.
+- Latest resolved production incident: 2026-07-06 07:30 KST run failed in normalization with psycopg `DuplicatePreparedStatement`; the 2026-07-07 07:31 KST production run completed and published successfully after the fix.
 - Workflow: `.github/workflows/manual-batch.yml`
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
@@ -33,6 +33,7 @@ Keep project memory and handoff documents aligned with the current Cloudflare-tr
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
+- Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-07 07:31 KST after the Supabase pooler prepared-statement fix.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -66,6 +67,12 @@ Keep project memory and handoff documents aligned with the current Cloudflare-tr
 - Local verification against failed run `7b01d78c-3816-472b-856b-4eafcbe28ab1` succeeded after disabling psycopg prepared statements:
   - `NORMALIZED_EVENTS_SAVED=16`
   - dry-run message generation produced `MESSAGE_CONTEXT=no_event`
+- The 2026-07-07 07:31 KST daily run succeeded:
+  - Ingest run `fc1f62f4-16b4-4cd2-a9bc-cc3b7bedf4ef` saved 4 raw Ara Waterway notice rows.
+  - Message run `df074c65-fe5b-4228-9367-3816b561321a` recorded `published_message_count=1`.
+  - `publish_attempts.status=success`, `failure_reason=None`.
+  - No `DuplicatePreparedStatement` recurrence was observed.
+  - The 4 raw rows matched existing non-publishable normalized notices and produced a no-event Telegram message.
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
 - Ara Waterway now uses an official K-water notice URL, but parser precision still needs improvement.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
@@ -73,11 +80,7 @@ Keep project memory and handoff documents aligned with the current Cloudflare-tr
 
 ## Next Actions
 
-1. Wait for the next 07:30 KST Cloudflare cron tick after the prepared-statement fix, or run `workflow_dispatch` manually with safe/intentional inputs.
-2. Check run logs for:
-   - `MESSAGE_STATUS=generated`
-   - `MESSAGE_CONTEXT=<...>`
-   - `MESSAGE_EVENT_COUNT=<number>` reflecting only KST same-day active events
-   - `TELEGRAM_STATUS=success` or a clear failure reason
-3. Confirm whether the 2026-07-06 `DuplicatePreparedStatement` incident is fully resolved in production.
-4. Refine Ara Waterway parser row scope, detail URLs, and location/section extraction.
+1. Continue observing daily 07:30 KST production runs for 3-7 days.
+2. Check that each run reaches Telegram `success` or records a clear failure reason.
+3. Refine Ara Waterway parser row scope, detail URLs, and location/section extraction.
+4. Consider improving run-level observability so ingest, normalization, and message publish status are easier to correlate.

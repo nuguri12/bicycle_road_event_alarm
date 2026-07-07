@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 ## Role
 
@@ -30,7 +30,7 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Fix: Disable psycopg prepared statements in the SQLAlchemy engine with `connect_args={"prepare_threshold": None}`.
 - Verification: Re-ran normalization locally for failed run `7b01d78c-3816-472b-856b-4eafcbe28ab1`; it completed with `NORMALIZED_EVENTS_SAVED=16`. Safe dry-run message generation then produced `MESSAGE_CONTEXT=no_event`.
 - Prevention: Keep Supabase Transaction Pooler compatibility in DB engine tests and verify production runs after DB connection behavior changes.
-- Follow-up: Confirm the next 07:30 KST production run completes with `TELEGRAM_STATUS=success` or a clear failure reason.
+- Follow-up: Resolved on 2026-07-07. The 07:31 KST production run completed message publishing successfully with no `DuplicatePreparedStatement` recurrence.
 
 ## 2026-07-06: Initial diagnosis risk when Telegram message is missing
 
