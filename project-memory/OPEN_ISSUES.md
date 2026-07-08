@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-07-07
+Last updated: 2026-07-08
 
 ## Must Resolve Soon
 
@@ -16,6 +16,13 @@ None.
   - DB/CLI records `partial_source_unavailable`.
   - User-facing message remains quiet no-event.
 - Next step: narrow notice row selection and extract route/section text such as bridge-to-bridge segments.
+
+### Hangang weekly event notice detail coverage
+
+- Seoulboard JSON listed `(안내) 2026년 7월 1주차 한강공원 주요행사 현황` on 2026-07-08.
+- Current crawler filters by cyclist/control relevance from JSON list fields and did not treat this as a cycling caution candidate.
+- Simple HTTP access to the hash-based public detail route did not expose detail content.
+- Next step only if source coverage becomes the priority: add a small detail fetch path or fixture for Hangang notice details.
 
 ### No-event dedupe weakened by send time
 

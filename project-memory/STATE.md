@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-07
+Last updated: 2026-07-08
 
 ## Current Objective
 
@@ -73,6 +73,11 @@ Observe daily 07:30 KST production runs for messaging reliability before expandi
   - `publish_attempts.status=success`, `failure_reason=None`.
   - No `DuplicatePreparedStatement` recurrence was observed.
   - The 4 raw rows matched existing non-publishable normalized notices and produced a no-event Telegram message.
+- The 2026-07-08 07:31 KST daily run succeeded:
+  - Ingest run `ceabbd6e-eb4b-4bf8-9902-cd491becf8e2` completed with no newly saved raw events.
+  - Message run `1767d14b-b05e-4311-adc4-d98bae795cec` recorded `published_message_count=1`.
+  - `publish_attempts.status=success`, `failure_reason=None`.
+  - Live source cross-check found 17 candidates across Hangang events, Hangang notices, and Ara Waterway notices, with 0 publish candidates and no source failures.
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
 - Ara Waterway now uses an official K-water notice URL, but parser precision still needs improvement.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
