@@ -13,6 +13,7 @@ from bicycle_road_event_alarm.normalization.location import extract_location
 from bicycle_road_event_alarm.normalization.title import normalize_title
 
 KST = ZoneInfo("Asia/Seoul")
+BICYCLE_ROUTE_KEYWORDS = ("자전거도로", "자전거길", "아라뱃길")
 
 
 @dataclass(frozen=True)
@@ -49,13 +50,23 @@ def normalize_raw_event(raw_event: RawEvent) -> NormalizedEventData:
 
     validation_status = _validation_status(parsed_datetime.start, location.location_name)
     start_datetime = parsed_datetime.start or raw_event.fetched_at or datetime.now(UTC)
-    location_name = location.location_name or "장소 확인 필요"
+    high_impact_without_location = _is_high_impact_route_event_without_location(
+        validation_status,
+        classification.cyclist_impact_level,
+        raw_event.raw_title,
+        raw_event.raw_body,
+    )
+    location_name = (
+        location.location_name
+        or ("구간 확인 필요" if high_impact_without_location else "장소 확인 필요")
+    )
     region = location.region or "unknown"
     duplicate_key = build_duplicate_key(title, start_datetime, location_name, region)
     publish_candidate = (
-        validation_status == "valid"
+        validation_status in {"valid", "needs_review"}
         and classification.publish_candidate_impact
         and classification.cyclist_impact_level in {"low", "medium", "high"}
+        and (validation_status == "valid" or high_impact_without_location)
         and _is_active_on_fetched_kst_date(
             start_datetime, parsed_datetime.end, raw_event.fetched_at
         )
@@ -102,6 +113,18 @@ def _is_active_on_fetched_kst_date(
 
     end_date = end_datetime.astimezone(KST).date()
     return start_date <= target_date <= end_date
+
+
+def _is_high_impact_route_event_without_location(
+    validation_status: str,
+    cyclist_impact_level: str,
+    raw_title: str | None,
+    raw_body: str | None,
+) -> bool:
+    if validation_status != "needs_review" or cyclist_impact_level != "high":
+        return False
+    text = f"{raw_title or ''} {raw_body or ''}"
+    return any(keyword in text for keyword in BICYCLE_ROUTE_KEYWORDS)
 
 
 # 중복 키 생성: 제목, 날짜, 장소, 지역을 낮은 변동성의 키로 정리합니다.

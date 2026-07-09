@@ -1,6 +1,13 @@
 # Decisions
 
-Last updated: 2026-07-06
+Last updated: 2026-07-09
+
+## 2026-07-09: Allow direct high-impact bicycle-route alerts without exact location
+
+- Decision: Treat active high-impact bicycle-route notices as publish candidates even when exact location extraction is missing.
+- Reason: Public notices can say `자전거도로 통행 차단` or similar without a clean location field. Requiring `validation_status=valid` created a false-negative risk for important cycling-road closure notices.
+- Alternatives considered: Keep excluding all missing-location notices; build a scoring system; wait for detail parsing improvements.
+- Impact: Missing-location high-impact route alerts use `구간 확인 필요` as the message location. Generic missing-location events remain excluded.
 
 ## 2026-07-06: Disable psycopg prepared statements for Supabase pooler
 

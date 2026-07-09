@@ -11,7 +11,14 @@ class ClassificationResult:
     publish_candidate_impact: bool
 
 
-HIGH_IMPACT_KEYWORDS = ("교통통제", "전면 통제", "출입 제한", "우회", "자전거도로 통제")
+HIGH_IMPACT_KEYWORDS = (
+    "교통통제",
+    "전면 통제",
+    "출입 제한",
+    "우회",
+    "자전거도로 통제",
+    "통행 차단",
+)
 MEDIUM_IMPACT_KEYWORDS = ("축제", "대규모 행사", "공원 행사", "마라톤")
 LOW_IMPACT_KEYWORDS = ("소규모 행사", "체험 행사", "안내 부스")
 

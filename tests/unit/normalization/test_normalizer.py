@@ -82,3 +82,17 @@ def test_normalize_raw_event_marks_missing_location_needs_review() -> None:
 
     assert normalized.validation_status == "needs_review"
     assert normalized.publish_candidate is False
+
+
+def test_normalize_raw_event_publishes_direct_bicycle_road_closure_without_location() -> None:
+    normalized = normalize_raw_event(
+        make_raw_event(
+            raw_title="아라뱃길 자전거도로 통행 차단 알림",
+            raw_location_text=None,
+            raw_body="자전거도로 일부 구간 통행 차단 예정입니다.",
+        )
+    )
+
+    assert normalized.validation_status == "needs_review"
+    assert normalized.location_name == "구간 확인 필요"
+    assert normalized.publish_candidate is True
