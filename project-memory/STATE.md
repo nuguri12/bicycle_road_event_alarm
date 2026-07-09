@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 
 ## Current Objective
 
@@ -78,6 +78,11 @@ Observe daily 07:30 KST production runs for messaging reliability before expandi
   - Message run `1767d14b-b05e-4311-adc4-d98bae795cec` recorded `published_message_count=1`.
   - `publish_attempts.status=success`, `failure_reason=None`.
   - Live source cross-check found 17 candidates across Hangang events, Hangang notices, and Ara Waterway notices, with 0 publish candidates and no source failures.
+- The 2026-07-09 07:31 KST daily run succeeded:
+  - Ingest run `81a17fa6-7022-41c3-b5fc-d5419b578c45` completed with no newly saved raw events and `error_summary=None`.
+  - Message run `e2811ac4-1f8c-4834-9a50-586dbafbbcf7` recorded `published_message_count=1`.
+  - `publish_attempts.status=success`, `failure_reason=None`.
+  - This is the third consecutive successful natural daily run after the 2026-07-06 prepared-statement incident.
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
 - Ara Waterway now uses an official K-water notice URL, but parser precision still needs improvement.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
@@ -85,7 +90,7 @@ Observe daily 07:30 KST production runs for messaging reliability before expandi
 
 ## Next Actions
 
-1. Continue observing daily 07:30 KST production runs for 3-7 days.
-2. Check that each run reaches Telegram `success` or records a clear failure reason.
+1. Treat daily triggering and Telegram no-event delivery as MVP-stable after three consecutive successful natural runs.
+2. Continue light monitoring of daily 07:30 KST production runs.
 3. Refine Ara Waterway parser row scope, detail URLs, and location/section extraction.
 4. Consider improving run-level observability so ingest, normalization, and message publish status are easier to correlate.
