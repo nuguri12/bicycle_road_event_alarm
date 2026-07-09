@@ -56,9 +56,8 @@ def normalize_raw_event(raw_event: RawEvent) -> NormalizedEventData:
         raw_event.raw_title,
         raw_event.raw_body,
     )
-    location_name = (
-        location.location_name
-        or ("구간 확인 필요" if high_impact_without_location else "장소 확인 필요")
+    location_name = location.location_name or (
+        "구간 확인 필요" if high_impact_without_location else "장소 확인 필요"
     )
     region = location.region or "unknown"
     duplicate_key = build_duplicate_key(title, start_datetime, location_name, region)

@@ -89,9 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             raw_event_count=0,
             normalized_event_count=0,
             published_message_count=1 if publish_result.status == "success" else 0,
-            error_summary=_message_run_summary(
-                args.run_id, message_context, source_error_summary
-            ),
+            error_summary=_message_run_summary(args.run_id, message_context, source_error_summary),
         )
         session.commit()
 
