@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-09
+Last updated: 2026-07-10
 
 ## Current Objective
 
@@ -15,7 +15,7 @@ MVP daily triggering and Telegram no-event delivery are stable after three conse
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`
 - Latest verified Cloudflare Worker smoke run: GitHub Actions run `28689723865` on commit `6b519ba`
-- Latest resolved production incident: 2026-07-06 07:30 KST run failed in normalization with psycopg `DuplicatePreparedStatement`; the 2026-07-07 07:31 KST production run completed and published successfully after the fix.
+- Latest resolved production incident: 2026-07-10 07:30 KST run failed at the GitHub Actions `Check formatting` step before ingestion; Black formatting was applied and manual recovery run `29057983250` completed with `TELEGRAM_STATUS=success`.
 - Workflow: `.github/workflows/manual-batch.yml`
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
@@ -85,6 +85,13 @@ MVP daily triggering and Telegram no-event delivery are stable after three conse
   - Message run `e2811ac4-1f8c-4834-9a50-586dbafbbcf7` recorded `published_message_count=1`.
   - `publish_attempts.status=success`, `failure_reason=None`.
   - This is the third consecutive successful natural daily run after the 2026-07-06 prepared-statement incident.
+- The 2026-07-10 07:30 KST daily run was dispatched by Cloudflare but failed before ingestion at GitHub Actions `Check formatting`:
+  - Failed run: `29054715710`
+  - Commit: `a8b3a33`
+  - Root cause: `python -m black --check .` would reformat `src/bicycle_road_event_alarm/cli/generate_messages.py` and `src/bicycle_road_event_alarm/normalization/normalizer.py`.
+  - Fix commit: `361b2ca` (`style: apply black formatting`)
+  - Recovery run: `29057983250`
+  - Recovery result: `RAW_EVENTS_SAVED=1`, `NORMALIZED_EVENTS_SAVED=1`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=19`.
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
 - Ara Waterway now uses an official K-water notice URL. Parser precision has been improved for title links without nested `strong` tags and detail pages that put `통제 구간` on a label line followed by the section text; live-source precision should still be monitored.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.

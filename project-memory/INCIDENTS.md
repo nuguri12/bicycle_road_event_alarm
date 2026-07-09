@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-07
+Last updated: 2026-07-10
 
 ## Role
 
@@ -21,6 +21,17 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-07-10: Telegram message missing because formatting gate stopped production batch
+
+- Symptom: The expected 2026-07-10 07:30 KST Telegram message did not arrive.
+- Impact: The natural Cloudflare-triggered production run was created but stopped before ingestion, normalization, and Telegram publishing.
+- Root cause: GitHub Actions run `29054715710` checked out commit `a8b3a33` and failed at `Check formatting` because `python -m black --check .` would reformat `src/bicycle_road_event_alarm/cli/generate_messages.py` and `src/bicycle_road_event_alarm/normalization/normalizer.py`.
+- Fix: Applied Black formatting and pushed commit `361b2ca` (`style: apply black formatting`).
+- Verification: Local checks passed: `python -m pytest -q` reported 92 passed, `python -m ruff check .` passed, `python -m mypy src tests` passed, `python -m black --check .` passed, and `python -m compileall src` succeeded.
+- Recovery: Manually dispatched the production `Manual Batch` workflow on `main`; run `29057983250` completed successfully. It emitted `RUN_ID=61ada9fd-2911-427a-92f9-57c80d5f1f0b`, `RAW_EVENTS_SAVED=1`, `NORMALIZED_EVENTS_SAVED=1`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, and `TELEGRAM_MESSAGE_ID=19`.
+- Prevention: Run `python -m black --check .` or `python -m black ...` before pushing changes that affect Python files. For missing Telegram messages, keep checking Actions run steps before assuming scheduler failure.
+- Follow-up: Resolved on 2026-07-10. Continue normal 07:30 KST monitoring.
 
 ## 2026-07-06: Telegram message missing after Cloudflare scheduled run
 
