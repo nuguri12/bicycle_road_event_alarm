@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-06
+Last updated: 2026-07-09
 
 ## Purpose
 
@@ -11,8 +11,8 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest runtime fix in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility.
-- Current local working tree may contain documentation updates; check `git status --short` before editing.
+- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing and message-stage run correlation were improved on 2026-07-09.
+- Current local working tree may contain follow-up parser/observability updates; check `git status --short` before editing.
 
 ## Project Goal
 
@@ -21,6 +21,8 @@ Daily Cycling Event Alert Service.
 The service collects public traffic-control and event information that may affect bicycle-road users, stores raw events, normalizes them, generates Korean alert messages, and publishes them to a Telegram channel.
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
+
+As of 2026-07-09, the Cloudflare-triggered daily production path is considered MVP-stable after three consecutive successful natural runs on 2026-07-07, 2026-07-08, and 2026-07-09.
 
 ## Current Operational Status
 
@@ -67,6 +69,8 @@ Latest natural production observation:
   - Fix: SQLAlchemy engine now passes `connect_args={"prepare_threshold": None}` to disable psycopg prepared statements.
   - Local verification against the failed run succeeded with `NORMALIZED_EVENTS_SAVED=16`.
   - Safe dry-run message generation then produced `MESSAGE_STATUS=generated`, `MESSAGE_CONTEXT=no_event`, and `TELEGRAM_STATUS=skipped`.
+- The 2026-07-07, 2026-07-08, and 2026-07-09 natural Cloudflare-triggered runs completed and published successfully.
+- The 2026-07-09 run was the third consecutive successful natural daily run after the prepared-statement incident, so the MVP production path is considered stable.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -128,6 +132,7 @@ Important behavior:
 - Publish candidates are limited to events active on the KST date when they were fetched.
 - Non-empty publish outcomes are recorded in `publish_attempts` for `success`, `failed`, and `skipped`.
 - Empty message skips are not recorded because they do not represent a publishable message.
+- Message-stage run summaries include the ingest run id when `generate_messages --run-id` is used, making ingest, message, and publish records easier to correlate.
 
 ## Environment And Secrets
 
@@ -186,7 +191,8 @@ Do not print or commit secret values.
 - Ara Waterway notice parser using K-water 경인아라뱃길 notice URL (`https://www.kwater.or.kr/giwaterway/ara/bbs/BBSMSTR_000000000021/lst.do`)
 - Ara Waterway notice row selector narrowed to board-list rows with `.ntt_sj`.
 - Ara Waterway detail URLs are built from `bbsMstrView('<id>')` onclick handlers.
-- Ara Waterway location extraction now uses explicit place fields, title parenthetical bridge/section text, and detail-page `통제 구간` body lines.
+- Ara Waterway title extraction supports board title links with or without nested `strong` tags.
+- Ara Waterway location extraction now uses explicit place fields, title parenthetical bridge/section text, detail-page `통제 구간: ...` body lines, and detail pages where `통제 구간` is a label followed by the section line.
 - Multi-source ingestion enriches Ara Waterway candidates by fetching each parsed detail URL; detail fetch failures leave the list candidate intact.
 - multi-source live ingestion
 - SPATIC parser retained but excluded from runtime ingestion
@@ -311,7 +317,7 @@ Latest full local verification after the prepared-statement fix:
 
 ```text
 python -m pytest -q
-88 passed
+91 passed
 
 python -m ruff check .
 All checks passed!
@@ -327,6 +333,19 @@ success
 
 npm test
 4 passed
+```
+
+Latest targeted verification after the 2026-07-09 Ara parser and run-correlation changes:
+
+```text
+python -m pytest tests/unit/crawler/test_ara_waterway.py -q
+7 passed
+
+python -m pytest tests/unit/messaging/test_generate_messages_cli.py -q
+5 passed
+
+python -m pytest -q
+91 passed in 2.79s
 ```
 
 Ara Waterway local smoke against saved K-water snapshots:
@@ -382,18 +401,19 @@ limit 10;
 ## Known Risks
 
 - GitHub Actions native schedule was unreliable in this project.
-- Cloudflare Workers Cron now owns the production trigger and produced a received 2026-07-05 07:31 KST Telegram no-event message.
-- Ara Waterway parser precision has been improved for the current K-water board DOM, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
+- Cloudflare Workers Cron now owns the production trigger and has produced three consecutive successful natural daily runs after the 2026-07-06 incident.
+- Ara Waterway parser precision has been improved for the current K-water board DOM, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by a separate section line, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
 - Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
+- Message-stage run summaries now include the ingest run id when `generate_messages --run-id` is used; add a dedicated batch correlation id only if manual operations review remains painful.
 - HTML/API parsers are fixture-driven and may require fixture updates when source pages change.
 - Normalization rules are deterministic MVP heuristics.
 - Some older sprint docs may still contain mojibake text from earlier encoding issues.
 
 ## Recommended Next Tasks
 
-1. Run or wait for one post-fix production batch and confirm `MESSAGE_EVENT_COUNT` reflects only KST same-day active events.
-2. Confirm the next production run reaches `TELEGRAM_STATUS=success` or records a clear failure reason.
-3. Review the next production run logs to confirm Ara Waterway detail enrichment does not introduce source timeouts.
-4. Consider recording a clearer run-level publish summary in `run_logs`.
-5. Continue monitoring no-event message frequency after the daily 07:30 KST schedule.
+1. Continue light monitoring of daily 07:30 KST Cloudflare-triggered production runs.
+2. Monitor Ara Waterway live-source precision and add fixtures if K-water markup changes again.
+3. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+4. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+5. Treat Hangang notice detail fetching as lower priority unless real source coverage gaps recur.

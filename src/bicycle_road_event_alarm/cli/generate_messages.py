@@ -89,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             raw_event_count=0,
             normalized_event_count=0,
             published_message_count=1 if publish_result.status == "success" else 0,
-            error_summary=_message_error_summary(
+            error_summary=_message_run_summary(
                 args.run_id, message_context, source_error_summary
             ),
         )
@@ -127,16 +127,17 @@ def _message_context(events: Sequence[object], source_error_summary: str | None)
     return "no_event"
 
 
-def _message_error_summary(
+def _message_run_summary(
     ingest_run_id: uuid.UUID | None,
     message_context: str,
     source_error_summary: str | None,
 ) -> str | None:
-    if message_context not in {"source_unavailable", "partial_source_unavailable"}:
+    if ingest_run_id is None:
         return None
-    return (
-        f"message_context={message_context}; ingest_run_id={ingest_run_id}; {source_error_summary}"
-    )
+    summary = f"message_context={message_context}; ingest_run_id={ingest_run_id}"
+    if source_error_summary is not None:
+        summary = f"{summary}; {source_error_summary}"
+    return summary
 
 
 if __name__ == "__main__":

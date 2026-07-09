@@ -11,11 +11,12 @@ None.
 ### Ara Waterway parser precision
 
 - Ara Waterway now uses official K-water 경인아라뱃길 notice URL.
-- Live parsing still over-collects surrounding page text and does not reliably extract detail URLs or location/section text.
+- Parser precision was improved on 2026-07-09 for board title links without nested `strong` tags and detail pages where `통제 구간` appears as a label followed by the section line.
+- Live parsing should still be monitored for future K-water markup changes.
 - Current behavior:
   - DB/CLI records `partial_source_unavailable`.
   - User-facing message remains quiet no-event.
-- Next step: narrow notice row selection and extract route/section text such as bridge-to-bridge segments.
+- Next step: add a new fixture and parser adjustment if live K-water output again over-collects surrounding page text or misses bridge-to-bridge segments.
 
 ### Hangang weekly event notice detail coverage
 
@@ -35,8 +36,9 @@ None.
 
 - `ingest_raw_events` creates one `run_logs` row and `generate_messages` creates another.
 - The workflow passes the ingest run id to normalization/message selection, but the message publish attempt is recorded against the message run id.
-- This is functional, but operational review requires correlating two run ids.
-- Next step only if this becomes painful: add a lightweight batch correlation id or store the ingest run id in the message run summary.
+- Message-stage run summaries now include the ingest run id when `generate_messages --run-id` is used.
+- This is functional and should make manual operations review easier.
+- Next step only if this still becomes painful: add a lightweight dedicated batch correlation id.
 
 ## Technical Debt
 

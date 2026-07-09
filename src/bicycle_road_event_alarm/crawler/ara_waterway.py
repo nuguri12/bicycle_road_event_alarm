@@ -81,13 +81,19 @@ def parse_ara_waterway_notice_detail_page(html: str) -> str | None:
         return None
 
     sections: list[str] = []
-    for line in content.get_text("\n", strip=True).splitlines():
+    lines = [line.strip() for line in content.get_text("\n", strip=True).splitlines()]
+    for index, line in enumerate(lines):
         match = re.search(r"통제\s*구간\s*[:：]\s*(?P<section>.+)", line.strip())
-        if match is None:
+        if match is not None:
+            section = " ".join(match.group("section").split())
+            if section:
+                sections.append(section)
             continue
-        section = " ".join(match.group("section").split())
-        if section:
-            sections.append(section)
+
+        if re.fullmatch(r"[-\s]*통제\s*구간\s*[-\s]*", line):
+            following_line = _next_section_line(lines[index + 1 :])
+            if following_line is not None:
+                sections.append(following_line)
 
     return "; ".join(sections) if sections else None
 
@@ -128,12 +134,23 @@ def _detail_url(row: Tag) -> str | None:
 
 
 def _title_text(row: Tag) -> str | None:
-    title_element = row.select_one(".ntt_sj strong")
+    title_element = row.select_one(".ntt_sj strong") or row.select_one(".ntt_sj a")
     if title_element is None:
         return None
     title = title_element.get_text(" ", strip=True)
     title = re.sub(r"\s*\[(?:new|secret)\]\s*", " ", title, flags=re.IGNORECASE)
     return " ".join(title.split()) or None
+
+
+def _next_section_line(lines: list[str]) -> str | None:
+    for line in lines:
+        normalized = " ".join(line.split())
+        if not normalized:
+            continue
+        if re.search(r"통제\s*사유|통제\s*일시|문의", normalized):
+            return None
+        return normalized.lstrip("- ").strip() or None
+    return None
 
 
 def _body_text(row: Tag, *, title: str | None, date_text: str | None) -> str | None:

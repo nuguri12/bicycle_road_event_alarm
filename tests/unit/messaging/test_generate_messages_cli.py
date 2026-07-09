@@ -226,6 +226,77 @@ def test_generate_messages_cli_force_fallback_does_not_create_openai_generator(
     openai_generator.assert_not_called()
 
 
+def test_generate_messages_cli_records_ingest_run_id_for_no_event_message_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = make_settings(
+        enable_telegram_publish=False,
+        dry_run=True,
+        telegram_bot_token=None,
+        telegram_channel_id=None,
+        openai_api_key=None,
+    )
+    session_factory = FakeSessionFactory()
+    message_run_id = uuid.uuid4()
+    ingest_run_id = uuid.uuid4()
+    run_log = SimpleNamespace(id=message_run_id)
+    finish_calls: list[dict[str, object]] = []
+
+    def fake_finish_run_log(_run_log: object, **kwargs: object) -> None:
+        finish_calls.append(kwargs)
+
+    monkeypatch.setattr(generate_messages, "load_dotenv", lambda _path: None)
+    monkeypatch.setattr(generate_messages, "load_settings", lambda: settings)
+    monkeypatch.setattr(
+        generate_messages,
+        "create_engine_from_settings",
+        lambda _settings: object(),
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "create_session_factory",
+        lambda _engine: session_factory,
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "load_publishable_message_events",
+        lambda _session, *, run_id=None: [],
+    )
+    monkeypatch.setattr(generate_messages, "load_run_error_summary", lambda _session, _run_id: None)
+    monkeypatch.setattr(generate_messages, "start_run_log", lambda _session: run_log)
+    monkeypatch.setattr(generate_messages, "finish_run_log", fake_finish_run_log)
+    monkeypatch.setattr(
+        generate_messages,
+        "generate_alert_message",
+        lambda _events, openai_generator=None, empty_reason="no_event": GeneratedMessage(
+            text="2026-07-09 07:31 기준 오늘 자전거 주의 이벤트가 없습니다.",
+            source="fallback",
+            status="generated",
+            event_count=0,
+        ),
+    )
+    monkeypatch.setattr(
+        generate_messages,
+        "publish_message_once",
+        lambda _session, **_kwargs: FakePublishResult(
+            status="skipped",
+            reason="telegram_publish_disabled",
+            telegram_message_id=None,
+        ),
+    )
+
+    assert generate_messages.main(["--run-id", str(ingest_run_id)]) == 0
+
+    assert finish_calls == [
+        {
+            "raw_event_count": 0,
+            "normalized_event_count": 0,
+            "published_message_count": 0,
+            "error_summary": f"message_context=no_event; ingest_run_id={ingest_run_id}",
+        }
+    ]
+
+
 def test_generate_messages_cli_returns_nonzero_when_real_telegram_publish_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

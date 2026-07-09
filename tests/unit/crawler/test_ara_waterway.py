@@ -65,6 +65,35 @@ def test_parse_ara_waterway_notices_page_ignores_unrelated_links() -> None:
     assert [candidate.raw_title for candidate in candidates] == ["아라뱃길 자전거길 통제 안내"]
 
 
+def test_parse_ara_waterway_notices_page_accepts_title_link_without_strong() -> None:
+    html = """
+    <html><body>
+      <div class="board notice list"><ul>
+        <li>
+          <p class="ntt_no">241</p>
+          <div class="ntt_sj left">
+            <a href="#" onclick="bbsMstrView('3004'); return false;">
+              아라뱃길 북측 자전거도로 (귤현대교~계양대교 구간) 통제 안내
+              <span class="new">[new]</span>
+            </a>
+          </div>
+          <p class="frst_register_nm">2026-07-09</p>
+        </li>
+      </ul></div>
+    </body></html>
+    """
+
+    candidates = parse_ara_waterway_notices_page(html)
+
+    assert len(candidates) == 1
+    assert candidates[0].raw_title == "아라뱃길 북측 자전거도로 (귤현대교~계양대교 구간) 통제 안내"
+    assert candidates[0].raw_location_text == "귤현대교~계양대교 구간"
+    assert (
+        candidates[0].source_url
+        == "https://www.kwater.or.kr/giwaterway/ara/BBSMSTR_000000000021/3004/view.do"
+    )
+
+
 def test_ara_waterway_source_url_is_public_waterway_site() -> None:
     assert (
         ARA_WATERWAY_NOTICES_URL
@@ -80,6 +109,23 @@ def test_parse_ara_waterway_notice_detail_page_extracts_control_sections() -> No
     assert (
         location_text == "수향원 인근 (계양대교 북단); 청운교 남단 ~ 목상교 남단 ~ 야생화테라스쉼터"
     )
+
+
+def test_parse_ara_waterway_notice_detail_page_extracts_section_from_following_line() -> None:
+    html = """
+    <html><body>
+      <div class="ntt_cn">
+        <p>행사 운영에 따라 일부 자전거도로 통행을 통제합니다.</p>
+        <p>통제 구간</p>
+        <p>벌말교 남단 ~ 목상교 남단</p>
+        <p>통제 사유: 마라톤 행사</p>
+      </div>
+    </body></html>
+    """
+
+    location_text = parse_ara_waterway_notice_detail_page(html)
+
+    assert location_text == "벌말교 남단 ~ 목상교 남단"
 
 
 def test_enrich_ara_waterway_candidates_with_details_prefers_detail_sections() -> None:

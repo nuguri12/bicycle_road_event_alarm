@@ -11,6 +11,26 @@
 - 개발 방식: Documentation Driven Development
 - 구현 원칙: Sprint 0부터 Sprint 9까지 문서 승인 후 구현 시작
 
+## Current Status As Of 2026-07-09
+
+이 문서의 초기 Sprint/DDD 내용은 과거 구현 전 상태를 설명합니다. 현재 운영 기준 최신 상태는 `project-memory/STATE.md`와 `docs/handoff-current-status.md`를 우선 참고합니다.
+
+- MVP production path is stable after three consecutive natural Cloudflare-triggered runs on 2026-07-07, 2026-07-08, and 2026-07-09.
+- Runtime now uses Cloudflare Cron `30 22 * * *`, meaning every day 07:30 KST, to dispatch the GitHub Actions `Manual Batch` workflow.
+- GitHub Actions native schedule is removed to avoid duplicate sends.
+- Runtime sources are Hangang events, Hangang notices via Seoulboard JSON API, and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL.
+- SPATIC remains in the repository for reference/regression only and is not called by runtime ingestion.
+- Ara Waterway parsing has been improved for current K-water board markup, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by the section line.
+- Message-stage run summaries now include the ingest run id when `generate_messages --run-id` is used, making operations review easier.
+- Latest local verification baseline: `python -m pytest -q` passed with 91 tests.
+
+Current recommended follow-up:
+
+1. Continue light monitoring of the daily 07:30 KST production runs.
+2. Monitor Ara Waterway live-source precision and add fixtures if K-water markup changes again.
+3. Review whether message-stage run summaries are enough before adding a dedicated batch correlation id.
+4. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+
 ## 진행 요약
 
 ### 1. Sprint 문서화 완료
@@ -144,6 +164,8 @@ DDD 문서화 산출물은 GitHub에 push되었습니다.
 - superpowers 계획 문서
 
 ## 다음 권장 작업
+
+아래 항목은 초기 구현 전 권장 순서입니다. 현재 후속 작업은 위 `Current Status As Of 2026-07-09` 섹션을 우선합니다.
 
 1. 이 요약 문서를 repository에 커밋하고 push합니다.
 2. 실제 구현 계획을 작성합니다.

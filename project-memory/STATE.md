@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-Observe daily 07:30 KST production runs for messaging reliability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering and Telegram no-event delivery are stable after three consecutive successful natural production runs. Continue light monitoring while improving source precision and operational traceability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -34,6 +34,7 @@ Observe daily 07:30 KST production runs for messaging reliability before expandi
   - `DRY_RUN=false`
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-07 07:31 KST after the Supabase pooler prepared-statement fix.
+- Natural Cloudflare-triggered runs on 2026-07-07, 2026-07-08, and 2026-07-09 all completed and published successfully, so the MVP production path is considered stable as of 2026-07-09.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -53,6 +54,7 @@ Observe daily 07:30 KST production runs for messaging reliability before expandi
 - Telegram publish attempts are recorded for success, failed, and non-empty skipped outcomes.
 - Production-mode Telegram publish failures return a non-zero CLI exit code so GitHub Actions fails visibly.
 - Duplicate successful publish prevention is active.
+- Message-stage run summaries now include the ingest run id when message generation is scoped with `--run-id`, which makes ingest/message/publish correlation easier during operations review.
 
 ## Known Current Observations
 
@@ -84,13 +86,13 @@ Observe daily 07:30 KST production runs for messaging reliability before expandi
   - `publish_attempts.status=success`, `failure_reason=None`.
   - This is the third consecutive successful natural daily run after the 2026-07-06 prepared-statement incident.
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
-- Ara Waterway now uses an official K-water notice URL, but parser precision still needs improvement.
+- Ara Waterway now uses an official K-water notice URL. Parser precision has been improved for title links without nested `strong` tags and detail pages that put `통제 구간` on a label line followed by the section text; live-source precision should still be monitored.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions
 
-1. Treat daily triggering and Telegram no-event delivery as MVP-stable after three consecutive successful natural runs.
-2. Continue light monitoring of daily 07:30 KST production runs.
-3. Refine Ara Waterway parser row scope, detail URLs, and location/section extraction.
-4. Consider improving run-level observability so ingest, normalization, and message publish status are easier to correlate.
+1. Continue light monitoring of daily 07:30 KST production runs.
+2. Continue monitoring Ara Waterway live-source precision and add fixtures if K-water markup changes again.
+3. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+4. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
