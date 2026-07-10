@@ -65,11 +65,19 @@ def enrich_ara_waterway_candidates_with_details(
 ) -> list[RawEventCandidate]:
     enriched: list[RawEventCandidate] = []
     for candidate in candidates:
-        detail_location = _detail_location(candidate, http_client, timeout_seconds=timeout_seconds)
-        if detail_location is None:
+        detail_html = _detail_html(candidate, http_client, timeout_seconds=timeout_seconds)
+        if detail_html is None:
             enriched.append(candidate)
             continue
-        enriched.append(replace(candidate, raw_location_text=detail_location))
+        detail_location = parse_ara_waterway_notice_detail_page(detail_html)
+        detail_body = _detail_body_text(detail_html)
+        enriched.append(
+            replace(
+                candidate,
+                raw_body=_combined_body(candidate.raw_body, detail_body),
+                raw_location_text=detail_location or candidate.raw_location_text,
+            )
+        )
 
     return enriched
 
@@ -83,22 +91,20 @@ def parse_ara_waterway_notice_detail_page(html: str) -> str | None:
     sections: list[str] = []
     lines = [line.strip() for line in content.get_text("\n", strip=True).splitlines()]
     for index, line in enumerate(lines):
-        match = re.search(r"통제\s*구간\s*[:：]\s*(?P<section>.+)", line.strip())
+        match = re.search(r"(?:통제|차단)\s*구간\s*[:：]\s*(?P<section>.+)", line.strip())
         if match is not None:
             section = " ".join(match.group("section").split())
             if section:
                 sections.append(section)
             continue
 
-        if re.fullmatch(r"[-\s]*통제\s*구간\s*[-\s]*", line):
-            following_line = _next_section_line(lines[index + 1 :])
-            if following_line is not None:
-                sections.append(following_line)
+        if _is_section_label(line):
+            sections.extend(_following_section_lines(lines[index + 1 :]))
 
     return "; ".join(sections) if sections else None
 
 
-def _detail_location(
+def _detail_html(
     candidate: RawEventCandidate,
     http_client: TextHttpClient,
     *,
@@ -108,7 +114,7 @@ def _detail_location(
         detail_html = http_client.get_text(candidate.source_url, timeout_seconds=timeout_seconds)
     except Exception:
         return None
-    return parse_ara_waterway_notice_detail_page(detail_html)
+    return detail_html
 
 
 def _class_names(row: Tag) -> set[str]:
@@ -142,15 +148,40 @@ def _title_text(row: Tag) -> str | None:
     return " ".join(title.split()) or None
 
 
-def _next_section_line(lines: list[str]) -> str | None:
+def _detail_body_text(html: str) -> str | None:
+    soup = soup_from_html(html)
+    content = soup.select_one(".ntt_cn") or soup.select_one(".texts")
+    if content is None:
+        return None
+    body = content.get_text(" ", strip=True)
+    return " ".join(body.split()) or None
+
+
+def _combined_body(raw_body: str | None, detail_body: str | None) -> str | None:
+    parts = [part for part in (raw_body, detail_body) if part]
+    return " ".join(parts) if parts else None
+
+
+def _is_section_label(line: str) -> bool:
+    label = line.strip().strip("<>[](){}").replace(" ", "")
+    return label in {"통제구간", "차단구간"}
+
+
+def _following_section_lines(lines: list[str]) -> list[str]:
+    sections: list[str] = []
     for line in lines:
         normalized = " ".join(line.split())
         if not normalized:
             continue
-        if re.search(r"통제\s*사유|통제\s*일시|문의", normalized):
-            return None
-        return normalized.lstrip("- ").strip() or None
-    return None
+        if re.search(r"(?:통제|차단)\s*(?:사유|일시|기간)|문의", normalized):
+            break
+        label = normalized.strip().strip("<>[](){}").replace(" ", "")
+        if label in {"통제기간", "차단기간", "통제사유", "차단사유"}:
+            break
+        section = normalized.lstrip("- ").strip()
+        if section:
+            sections.append(section)
+    return sections
 
 
 def _body_text(row: Tag, *, title: str | None, date_text: str | None) -> str | None:

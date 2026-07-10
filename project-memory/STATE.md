@@ -92,6 +92,10 @@ MVP daily triggering and Telegram no-event delivery are stable after three conse
   - Fix commit: `361b2ca` (`style: apply black formatting`)
   - Recovery run: `29057983250`
   - Recovery result: `RAW_EVENTS_SAVED=1`, `NORMALIZED_EVENTS_SAVED=1`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=19`.
+- Post-recovery source comparison found the no-event message was a false negative:
+  - Ara Waterway notice `1224` says bicycle-road, Aramaru observatory, and Ara waterfall access is closed from 2026-07-09 13:00 until weather conditions improve.
+  - Root cause: Ara detail body `<차단구간>`/`<차단기간>` was not preserved, and open-ended weather closures were treated as same-day only.
+  - Local fix now makes the live source produce `PUBLISH_COUNT=1` for notice `1224`.
 - Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
 - Ara Waterway now uses an official K-water notice URL. Parser precision has been improved for title links without nested `strong` tags and detail pages that put `통제 구간` on a label line followed by the section text; live-source precision should still be monitored.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.

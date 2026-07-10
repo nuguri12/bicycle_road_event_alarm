@@ -96,3 +96,42 @@ def test_normalize_raw_event_publishes_direct_bicycle_road_closure_without_locat
     assert normalized.validation_status == "needs_review"
     assert normalized.location_name == "구간 확인 필요"
     assert normalized.publish_candidate is True
+
+
+def test_normalize_raw_event_publishes_weather_closure_until_conditions_improve() -> None:
+    normalized = normalize_raw_event(
+        make_raw_event(
+            raw_title=(
+                "자전거도로, 아라마루 전망대 및 아라폭포 통행 차단 알림 "
+                "(7.9(목) 13:00 ~ 기상 여건 완화 시)"
+            ),
+            raw_date_text="2026-07-09",
+            raw_location_text="시천교~계양대교 남, 북측 자전거도로",
+            raw_body=(
+                "금일 강우예보로 인하여 이용객 안전을 위해 자전거도로 등 출입 차단 중입니다. "
+                "<차단기간> 7.9(목) 13:00 ~ 기상 여건 완화 시"
+            ),
+            fetched_at=datetime(2026, 7, 9, 23, 41, tzinfo=UTC),
+        )
+    )
+
+    assert normalized.validation_status == "needs_review"
+    assert normalized.location_name == "구간 확인 필요"
+    assert normalized.publish_candidate is True
+
+
+def test_normalize_raw_event_does_not_publish_completed_indefinite_closure() -> None:
+    normalized = normalize_raw_event(
+        make_raw_event(
+            raw_title=(
+                "자전거도로, 아라마루 전망대 및 아라폭포 통행 차단 알림 "
+                "(6.19. 18:00 ~ 기상 여건 완화 시) [개방완료]"
+            ),
+            raw_date_text="2026-06-19",
+            raw_location_text="시천교~계양대교 남, 북측 자전거도로",
+            raw_body="기상 여건 완화 시까지 통행 차단합니다.",
+            fetched_at=datetime(2026, 7, 9, 23, 41, tzinfo=UTC),
+        )
+    )
+
+    assert normalized.publish_candidate is False

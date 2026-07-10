@@ -30,8 +30,10 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Fix: Applied Black formatting and pushed commit `361b2ca` (`style: apply black formatting`).
 - Verification: Local checks passed: `python -m pytest -q` reported 92 passed, `python -m ruff check .` passed, `python -m mypy src tests` passed, `python -m black --check .` passed, and `python -m compileall src` succeeded.
 - Recovery: Manually dispatched the production `Manual Batch` workflow on `main`; run `29057983250` completed successfully. It emitted `RUN_ID=61ada9fd-2911-427a-92f9-57c80d5f1f0b`, `RAW_EVENTS_SAVED=1`, `NORMALIZED_EVENTS_SAVED=1`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, and `TELEGRAM_MESSAGE_ID=19`.
+- Additional finding: Comparing the sent no-event message with live source data showed a false negative. Ara Waterway notice `1224` announced bicycle-road, Aramaru observatory, and Ara waterfall access closure from 2026-07-09 13:00 until weather conditions improve. The pipeline saved/normalized the notice but did not publish it because detail body `<차단구간>`/`<차단기간>` was not preserved and the open-ended weather closure was treated as a one-day event.
+- Additional fix: Preserve Ara Waterway detail body during enrichment, extract `<차단구간>` sections, and treat non-completed `기상 여건 완화 시` bicycle-road closures as active after the start date.
 - Prevention: Run `python -m black --check .` or `python -m black ...` before pushing changes that affect Python files. For missing Telegram messages, keep checking Actions run steps before assuming scheduler failure.
-- Follow-up: Resolved on 2026-07-10. Continue normal 07:30 KST monitoring.
+- Follow-up: Resolved on 2026-07-10. Consider a one-off corrective Telegram alert for Ara Waterway notice `1224` if user-facing correction is desired.
 
 ## 2026-07-06: Telegram message missing after Cloudflare scheduled run
 

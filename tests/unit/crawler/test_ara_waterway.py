@@ -11,14 +11,37 @@ DETAIL_HTML = Path("tests/fixtures/crawler/ara_waterway_notice_detail.html").rea
     encoding="utf-8"
 )
 
+WEATHER_CLOSURE_DETAIL_HTML = """
+<html><body>
+  <div class="board notice view">
+    <strong class="ntt_sj">
+      자전거도로, 아라마루 전망대 및 아라폭포 통행 차단 알림 (7.9(목) 13:00 ~ 기상 여건 완화 시)
+    </strong>
+    <div class="ntt_cn">
+      <p>
+        금일 강우예보로 인하여 이용객 안전을 위해 자전거도로 등 출입 차단 중이니
+        양해 부탁드립니다.
+      </p>
+      <p>&lt;차단구간&gt;</p>
+      <p>- 시천교~계양대교 남, 북측 자전거도로</p>
+      <p>- 굴포천 연결수로 좌안(서측) 자전거도로</p>
+      <p>- 아라마루 전망대 및 아라폭포</p>
+      <p>&lt;차단기간&gt;</p>
+      <p>- 7.9(목) 13:00 ~ 기상 여건 완화 시</p>
+    </div>
+  </div>
+</body></html>
+"""
+
 
 class FakeHttpClient:
-    def __init__(self) -> None:
+    def __init__(self, html: str = DETAIL_HTML) -> None:
+        self.html = html
         self.calls: list[tuple[str, int | None]] = []
 
     def get_text(self, url: str, *, timeout_seconds: int | None = None) -> str:
         self.calls.append((url, timeout_seconds))
-        return DETAIL_HTML
+        return self.html
 
 
 def test_parse_ara_waterway_notices_page_builds_notice_candidates() -> None:
@@ -128,6 +151,16 @@ def test_parse_ara_waterway_notice_detail_page_extracts_section_from_following_l
     assert location_text == "벌말교 남단 ~ 목상교 남단"
 
 
+def test_parse_ara_waterway_notice_detail_page_extracts_blocked_sections() -> None:
+    location_text = parse_ara_waterway_notice_detail_page(WEATHER_CLOSURE_DETAIL_HTML)
+
+    assert (
+        location_text
+        == "시천교~계양대교 남, 북측 자전거도로; 굴포천 연결수로 좌안(서측) 자전거도로; "
+        "아라마루 전망대 및 아라폭포"
+    )
+
+
 def test_enrich_ara_waterway_candidates_with_details_prefers_detail_sections() -> None:
     html = Path("tests/fixtures/crawler/ara_waterway_notices_list.html").read_text(encoding="utf-8")
     candidates = parse_ara_waterway_notices_page(html)
@@ -153,3 +186,36 @@ def test_enrich_ara_waterway_candidates_with_details_prefers_detail_sections() -
             10,
         ),
     ]
+
+
+def test_enrich_ara_waterway_candidates_with_details_preserves_detail_body() -> None:
+    html = """
+    <html><body>
+      <div class="board notice list"><ul>
+        <li>
+          <p class="ntt_no">242</p>
+          <div class="ntt_sj left">
+            <a href="#" onclick="bbsMstrView('1224'); return false;">
+              <strong>
+                자전거도로, 아라마루 전망대 및 아라폭포 통행 차단 알림
+                (7.9(목) 13:00 ~ 기상 여건 완화 시)
+              </strong>
+            </a>
+          </div>
+          <p class="frst_register_nm">2026-07-09</p>
+        </li>
+      </ul></div>
+    </body></html>
+    """
+    candidates = parse_ara_waterway_notices_page(html)
+    http_client = FakeHttpClient(WEATHER_CLOSURE_DETAIL_HTML)
+
+    enriched = enrich_ara_waterway_candidates_with_details(candidates, http_client)
+
+    assert len(enriched) == 1
+    assert "차단기간" in (enriched[0].raw_body or "")
+    assert "기상 여건 완화 시" in (enriched[0].raw_body or "")
+    assert enriched[0].raw_location_text == (
+        "시천교~계양대교 남, 북측 자전거도로; 굴포천 연결수로 좌안(서측) 자전거도로; "
+        "아라마루 전망대 및 아라폭포"
+    )

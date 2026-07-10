@@ -66,8 +66,12 @@ def normalize_raw_event(raw_event: RawEvent) -> NormalizedEventData:
         and classification.publish_candidate_impact
         and classification.cyclist_impact_level in {"low", "medium", "high"}
         and (validation_status == "valid" or high_impact_without_location)
-        and _is_active_on_fetched_kst_date(
-            start_datetime, parsed_datetime.end, raw_event.fetched_at
+        and _is_active_for_publish(
+            start_datetime,
+            parsed_datetime.end,
+            raw_event.fetched_at,
+            raw_event.raw_title,
+            raw_event.raw_body,
         )
     )
 
@@ -112,6 +116,30 @@ def _is_active_on_fetched_kst_date(
 
     end_date = end_datetime.astimezone(KST).date()
     return start_date <= target_date <= end_date
+
+
+def _is_active_for_publish(
+    start_datetime: datetime,
+    end_datetime: datetime | None,
+    fetched_at: datetime | None,
+    raw_title: str | None,
+    raw_body: str | None,
+) -> bool:
+    if _is_active_on_fetched_kst_date(start_datetime, end_datetime, fetched_at):
+        return True
+    if end_datetime is not None:
+        return False
+
+    기준시각 = fetched_at or datetime.now(UTC)
+    if 기준시각.tzinfo is None:
+        기준시각 = 기준시각.replace(tzinfo=UTC)
+    if start_datetime.astimezone(KST).date() > 기준시각.astimezone(KST).date():
+        return False
+
+    text = f"{raw_title or ''} {raw_body or ''}"
+    if re.search(r"개방\s*완료|개방완료|종료|해제", text):
+        return False
+    return bool(re.search(r"기상\s*여건\s*완화\s*시|기상\s*여건\s*완화시", text))
 
 
 def _is_high_impact_route_event_without_location(
