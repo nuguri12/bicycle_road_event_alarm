@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-09
+Last updated: 2026-07-14
 
 ## Purpose
 
@@ -11,8 +11,8 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing and message-stage run correlation were improved on 2026-07-09.
-- Current local working tree may contain follow-up parser/observability updates; check `git status --short` before editing.
+- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing, message-stage run correlation, and the 2026-07-10 formatting-gate recovery are documented.
+- Check `git status --short` before editing.
 
 ## Project Goal
 
@@ -22,7 +22,7 @@ The service collects public traffic-control and event information that may affec
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
-As of 2026-07-09, the Cloudflare-triggered daily production path is considered MVP-stable after three consecutive successful natural runs on 2026-07-07, 2026-07-08, and 2026-07-09.
+As of 2026-07-14, the Cloudflare-triggered daily production path is considered MVP-stable after seven verified successful natural production runs since the 2026-07-06 prepared-statement fix. The separate 2026-07-10 formatting-gate incident was recovered and resolved.
 
 ## Current Operational Status
 
@@ -70,7 +70,20 @@ Latest natural production observation:
   - Local verification against the failed run succeeded with `NORMALIZED_EVENTS_SAVED=16`.
   - Safe dry-run message generation then produced `MESSAGE_STATUS=generated`, `MESSAGE_CONTEXT=no_event`, and `TELEGRAM_STATUS=skipped`.
 - The 2026-07-07, 2026-07-08, and 2026-07-09 natural Cloudflare-triggered runs completed and published successfully.
-- The 2026-07-09 run was the third consecutive successful natural daily run after the prepared-statement incident, so the MVP production path is considered stable.
+- The 2026-07-10 07:30 KST daily run was dispatched by Cloudflare but failed before ingestion at GitHub Actions `Check formatting`.
+  - Failed run: `29054715710`
+  - Commit: `a8b3a33`
+  - Root cause: `python -m black --check .` would reformat `src/bicycle_road_event_alarm/cli/generate_messages.py` and `src/bicycle_road_event_alarm/normalization/normalizer.py`.
+  - Fix commit: `361b2ca` (`style: apply black formatting`)
+  - Recovery run: `29057983250`
+  - Recovery result: `RAW_EVENTS_SAVED=1`, `NORMALIZED_EVENTS_SAVED=1`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=19`.
+- Post-recovery source comparison found the 2026-07-10 no-event message was a false negative:
+  - Ara Waterway notice `1224` announced bicycle-road, Aramaru observatory, and Ara waterfall access closure from 2026-07-09 13:00 until weather conditions improve.
+  - Root cause: Ara detail body `<차단구간>`/`<차단기간>` was not preserved, and open-ended weather closures were treated as same-day only.
+  - At the time of the fix, local live-source normalization produced `PUBLISH_COUNT=1` for notice `1224`.
+  - Current source state no longer publishes it because notice `1224` is now marked `[개방완료]`.
+- The 2026-07-11 through 2026-07-14 natural Cloudflare-triggered daily runs completed and published no-event Telegram messages successfully.
+- The MVP production path remains stable as of 2026-07-14.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -401,7 +414,7 @@ limit 10;
 ## Known Risks
 
 - GitHub Actions native schedule was unreliable in this project.
-- Cloudflare Workers Cron now owns the production trigger and has produced three consecutive successful natural daily runs after the 2026-07-06 incident.
+- Cloudflare Workers Cron now owns the production trigger and has produced seven verified successful natural daily runs after the 2026-07-06 prepared-statement incident.
 - Ara Waterway parser precision has been improved for the current K-water board DOM, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by a separate section line, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
 - Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
