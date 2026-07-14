@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-07-08
+Last updated: 2026-07-14
 
 ## Must Resolve Soon
 
@@ -41,6 +41,12 @@ None.
 - Next step only if this still becomes painful: add a lightweight dedicated batch correlation id.
 
 ## Technical Debt
+
+### Serviceization sequencing
+
+- SNS publishing, Hermes Agent evaluation, VPS scheduler changes, web UI, and rich user preferences are intentionally deferred.
+- Next serviceization work should first improve parser/source stability, then add one regional source, then add Telegram personal chat delivery.
+- Avoid broad publish abstractions until there is more than one real non-SNS delivery path.
 
 ### Older docs may be stale
 

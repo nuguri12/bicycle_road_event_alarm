@@ -113,6 +113,15 @@ MVP daily triggering and Telegram no-event delivery remain stable across seven v
 ## Next Actions
 
 1. Continue light monitoring of daily 07:30 KST production runs.
-2. Continue monitoring Ara Waterway live-source precision and add fixtures if K-water markup changes again.
-3. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-4. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+2. Stabilize parsing before adding product features:
+   - Fix parser false-negative cases with fixtures, starting with Ara Waterway notice `1224`.
+   - Review Hangang notice detail coverage only if source coverage becomes the priority.
+   - Keep live-source smoke checks lightweight.
+3. Add only one new regional source after parser stability improves.
+4. Add Telegram personal chat delivery before web or SNS:
+   - Start with `/start`, `/stop`, stored `chat_id`, and `enabled` status.
+   - Defer complex preferences; first personalization should be a simple region choice.
+5. Build a minimal web/admin surface only after Telegram personal delivery works.
+6. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
+7. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+8. Revisit no-event message dedupe only if daily no-event confirmations become noisy.

@@ -1,6 +1,13 @@
 # Decisions
 
-Last updated: 2026-07-09
+Last updated: 2026-07-14
+
+## 2026-07-14: Defer SNS expansion until source quality and personal Telegram delivery are stable
+
+- Decision: Do not expand publishing to SNS yet. Serviceization should proceed in this order: parser/source stability, one additional regional source, Telegram personal chat delivery, minimal personalization, then web management. SNS, Hermes Agent, and VPS scheduler changes stay deferred.
+- Reason: Publishing to more channels before source precision and per-user delivery are stable would amplify false positives/false negatives and add platform-policy risk.
+- Alternatives considered: Add SNS publishing now; build a web service first; move scheduling off Cloudflare/GitHub first.
+- Impact: The next work should stay focused on parser fixtures, source precision, controlled source expansion, and Telegram subscriber support in the existing monolith.
 
 ## 2026-07-09: Allow direct high-impact bicycle-route alerts without exact location
 
