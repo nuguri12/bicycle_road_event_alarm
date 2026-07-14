@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-10
+Last updated: 2026-07-14
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering and Telegram no-event delivery are stable after three consecutive successful natural production runs. Continue light monitoring while improving source precision and operational traceability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering and Telegram no-event delivery remain stable across seven verified successful natural production runs since the 2026-07-06 prepared-statement fix, with the separate 2026-07-10 formatting-gate incident recovered and resolved. Continue light monitoring while improving source precision and operational traceability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -35,6 +35,8 @@ MVP daily triggering and Telegram no-event delivery are stable after three conse
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-07 07:31 KST after the Supabase pooler prepared-statement fix.
 - Natural Cloudflare-triggered runs on 2026-07-07, 2026-07-08, and 2026-07-09 all completed and published successfully, so the MVP production path is considered stable as of 2026-07-09.
+- Natural Cloudflare-triggered runs on 2026-07-11, 2026-07-12, and 2026-07-13 all completed and published no-event Telegram messages successfully on commit `ec71518`.
+- Natural Cloudflare-triggered run on 2026-07-14 completed and published a no-event Telegram message successfully on commit `ec71518`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -96,7 +98,14 @@ MVP daily triggering and Telegram no-event delivery are stable after three conse
   - Ara Waterway notice `1224` says bicycle-road, Aramaru observatory, and Ara waterfall access is closed from 2026-07-09 13:00 until weather conditions improve.
   - Root cause: Ara detail body `<차단구간>`/`<차단기간>` was not preserved, and open-ended weather closures were treated as same-day only.
   - Local fix now makes the live source produce `PUBLISH_COUNT=1` for notice `1224`.
-- Current live-source/local normalization check found 19 raw candidates and 0 KST same-day publish candidates.
+- Current live-source/local normalization check found 16 raw candidates, no source failures, and 0 KST same-day publish candidates. The Ara Waterway 2026-07-09 closure notice `1224` is now marked `[개방완료]` at the source.
+- The 2026-07-11 through 2026-07-13 07:30 KST daily runs were verified from GitHub Actions logs:
+  - 2026-07-11 run `29127918535`: `RUN_ID=156d80d8-d81a-4ade-90e3-85558bb19808`, `RAW_EVENTS_SAVED=12`, `NORMALIZED_EVENTS_SAVED=11`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=20`.
+  - 2026-07-12 run `29170623309`: `RUN_ID=e4c824ad-0322-4ac8-b791-88bee652e360`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=21`.
+  - 2026-07-13 run `29211677015`: `RUN_ID=59d9f6aa-e203-4520-b05b-50cc8faf2f1f`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=22`.
+- The 2026-07-14 07:30 KST daily run `29290118663` was verified from GitHub Actions logs:
+  - `RUN_ID=7d90531b-b148-43fe-b8af-22dde039f769`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=23`.
+  - Live source cross-check found 16 candidates, no source failures, and 0 KST same-day publish candidates. Ara Waterway notice `1224` remains `[개방완료]`.
 - Ara Waterway now uses an official K-water notice URL. Parser precision has been improved for title links without nested `strong` tags and detail pages that put `통제 구간` on a label line followed by the section text; live-source precision should still be monitored.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
