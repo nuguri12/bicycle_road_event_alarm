@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering and Telegram no-event delivery remain stable across seven verified successful natural production runs since the 2026-07-06 prepared-statement fix, with the separate 2026-07-10 formatting-gate incident recovered and resolved. Continue light monitoring while improving source precision and operational traceability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering and Telegram no-event delivery remain stable across eight verified successful natural production runs since the 2026-07-06 prepared-statement fix, with the separate 2026-07-10 formatting-gate incident recovered and resolved. Continue light monitoring while improving source precision and operational traceability before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -37,6 +37,7 @@ MVP daily triggering and Telegram no-event delivery remain stable across seven v
 - Natural Cloudflare-triggered runs on 2026-07-07 through 2026-07-09 completed and published successfully, so the MVP production path was considered stable as of 2026-07-09.
 - Natural Cloudflare-triggered runs on 2026-07-11, 2026-07-12, and 2026-07-13 all completed and published no-event Telegram messages successfully on commit `ec71518`.
 - Natural Cloudflare-triggered run on 2026-07-14 completed and published a no-event Telegram message successfully on commit `ec71518`.
+- Natural Cloudflare-triggered run on 2026-07-15 completed and published a no-event Telegram message successfully on commit `cecc804`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -105,6 +106,9 @@ MVP daily triggering and Telegram no-event delivery remain stable across seven v
   - 2026-07-13 run `29211677015`: `RUN_ID=59d9f6aa-e203-4520-b05b-50cc8faf2f1f`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=22`.
 - The 2026-07-14 07:30 KST daily run `29290118663` was verified from GitHub Actions logs:
   - `RUN_ID=7d90531b-b148-43fe-b8af-22dde039f769`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=23`.
+  - Live source cross-check found 16 candidates, no source failures, and 0 KST same-day publish candidates. Ara Waterway notice `1224` remains `[개방완료]`.
+- The 2026-07-15 07:30 KST daily run `29373204016` was verified from GitHub Actions logs:
+  - `RUN_ID=7003c5c0-ac79-4166-8871-ccdb27261e7b`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_CONTEXT=no_event`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=24`.
   - Live source cross-check found 16 candidates, no source failures, and 0 KST same-day publish candidates. Ara Waterway notice `1224` remains `[개방완료]`.
 - Ara Waterway now uses an official K-water notice URL. Parser precision has been improved for title links without nested `strong` tags and detail pages that put `통제 구간` on a label line followed by the section text; live-source precision should still be monitored.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
