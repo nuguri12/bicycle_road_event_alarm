@@ -63,7 +63,7 @@ def candidate_to_raw_event(run_id: uuid.UUID, candidate: RawEventCandidate) -> R
     )
 
 
-# 중복 저장 방지: 이미 같은 content_hash가 있으면 새 레코드를 추가하지 않습니다.
+# 중복 저장 방지: 이미 같은 content_hash가 있으면 기존 row를 현재 수집 run의 관측값으로 갱신합니다.
 def save_raw_event_candidates(
     session: Session,
     run_id: uuid.UUID,
@@ -72,13 +72,29 @@ def save_raw_event_candidates(
     saved_count = 0
 
     for candidate in candidates:
-        existing_id = session.scalar(
-            select(RawEvent.id).where(RawEvent.content_hash == candidate.content_hash)
+        existing = session.scalar(
+            select(RawEvent).where(RawEvent.content_hash == candidate.content_hash)
         )
-        if existing_id is not None:
+        if existing is not None:
+            refresh_existing_raw_event(existing, run_id, candidate)
             continue
 
         session.add(candidate_to_raw_event(run_id, candidate))
         saved_count += 1
 
     return saved_count
+
+
+def refresh_existing_raw_event(
+    raw_event: RawEvent,
+    run_id: uuid.UUID,
+    candidate: RawEventCandidate,
+) -> None:
+    raw_event.run_id = run_id
+    raw_event.source_name = candidate.source_name
+    raw_event.source_url = candidate.source_url
+    raw_event.raw_title = candidate.raw_title
+    raw_event.raw_body = candidate.raw_body
+    raw_event.raw_date_text = candidate.raw_date_text
+    raw_event.raw_location_text = candidate.raw_location_text
+    raw_event.fetched_at = datetime.now(UTC)

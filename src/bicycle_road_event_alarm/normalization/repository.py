@@ -33,19 +33,38 @@ def normalized_data_to_model(data: NormalizedEventData) -> NormalizedEvent:
     )
 
 
-# 중복 저장 방지: deterministic_duplicate_key가 이미 있으면 저장하지 않습니다.
+# 중복 저장 방지: 같은 duplicate key의 row를 최신 정규화 결과로 갱신합니다.
 def save_normalized_events(session: Session, raw_events: list[RawEvent]) -> int:
     saved_count = 0
     for raw_event in raw_events:
         normalized = normalize_raw_event(raw_event)
-        existing_id = session.scalar(
-            select(NormalizedEvent.id).where(
+        existing = session.scalar(
+            select(NormalizedEvent).where(
                 NormalizedEvent.deterministic_duplicate_key
                 == normalized.deterministic_duplicate_key
             )
         )
-        if existing_id is not None:
+        if existing is not None:
+            update_normalized_event(existing, normalized)
             continue
         session.add(normalized_data_to_model(normalized))
         saved_count += 1
     return saved_count
+
+
+def update_normalized_event(
+    existing: NormalizedEvent,
+    data: NormalizedEventData,
+) -> None:
+    existing.raw_event_id = data.raw_event_id
+    existing.title = data.title
+    existing.start_datetime = data.start_datetime
+    existing.end_datetime = data.end_datetime
+    existing.location_name = data.location_name
+    existing.region = data.region
+    existing.event_type = data.event_type
+    existing.cyclist_impact_level = data.cyclist_impact_level
+    existing.cyclist_impact_reason = data.cyclist_impact_reason
+    existing.publish_candidate = data.publish_candidate
+    existing.validation_status = data.validation_status
+    existing.updated_at = datetime.now(UTC)
