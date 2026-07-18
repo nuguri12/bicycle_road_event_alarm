@@ -1,10 +1,22 @@
 # Open Issues
 
-Last updated: 2026-07-14
+Last updated: 2026-07-18
 
 ## Must Resolve Soon
 
-None.
+### Active event can be missed when the raw source item is a duplicate from a prior run
+
+- 2026-07-18 live-source smoke found Ara Waterway notice `1217` as a publishable active weather closure for the 2026-07-18 07:30 KST batch window.
+- The Telegram message received by the user said there were no alert events, so source state and user-facing message are inconsistent.
+- Likely root cause:
+  - `save_raw_event_candidates` skips rows whose `content_hash` already exists.
+  - The workflow scopes normalization and message generation to the current ingest `RUN_ID`.
+  - If an open-ended or multi-day notice was already stored in a previous run, the current run may save `RAW_EVENTS_SAVED=0`.
+  - `generate_messages --run-id <current_run>` then queries only normalized events joined to raw rows from the current run and misses still-active duplicate source items.
+- Evidence:
+  - Live source returned 17 candidates and no source failures.
+  - Ara Waterway notice `1217` (`https://www.kwater.or.kr/giwaterway/ara/BBSMSTR_000000000021/1217/view.do`) normalized to `publish_candidate=True` for 2026-07-18 07:30 KST.
+- Next step: adjust the ingestion/normalization/message scoping model so currently observed duplicate raw items remain visible to the current run, then add a regression test for an active duplicate raw event from a prior run.
 
 ## Operational Risks
 
