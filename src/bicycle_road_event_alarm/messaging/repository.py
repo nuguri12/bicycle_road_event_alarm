@@ -37,7 +37,6 @@ def _publishable_events_statement(
         select(NormalizedEvent, RawEvent.source_url)
         .join(RawEvent, RawEvent.id == NormalizedEvent.raw_event_id)
         .where(NormalizedEvent.publish_candidate.is_(True))
-        .where(NormalizedEvent.validation_status == "valid")
         .where(NormalizedEvent.cyclist_impact_level.in_(("low", "medium", "high")))
         .order_by(NormalizedEvent.start_datetime.asc())
     )

@@ -13,7 +13,7 @@ def test_load_publishable_message_events_filters_publish_candidates() -> None:
     assert events == []
     statement_text = str(session.execute.call_args.args[0])
     assert "normalized_events.publish_candidate" in statement_text
-    assert "normalized_events.validation_status = :validation_status_1" in statement_text
+    assert "normalized_events.validation_status = :validation_status_1" not in statement_text
 
 
 def test_load_publishable_message_events_can_scope_to_run_id() -> None:

@@ -4,6 +4,30 @@ Last updated: 2026-07-19
 
 ## Must Resolve Soon
 
+### Message query excludes high-impact needs-review publish candidates
+
+- 2026-07-19 manual workflow on commit `461154a` produced:
+  - `RUN_ID=770e519e-95b4-4df2-b67f-3bdd3aac99da`
+  - `RAW_EVENTS_SAVED=0`
+  - `NORMALIZED_EVENTS_SAVED=0`
+  - `MESSAGE_EVENT_COUNT=0`
+  - `MESSAGE_CONTEXT=no_event`
+- Live source cross-check immediately after the run found 17 candidates, no source failures, and Ara Waterway notice `1217` as a publish candidate.
+- The notice normalized to:
+  - `publish_candidate=True`
+  - `validation_status=needs_review`
+  - `location_name=구간 확인 필요`
+  - `cyclist_impact_level=high`
+- Root cause:
+  - `normalize_raw_event` intentionally allows high-impact bicycle-road closures without precise location as publish candidates.
+  - `load_publishable_message_events` then filters SQL results with `NormalizedEvent.validation_status == "valid"`, excluding that publish candidate before message generation.
+- Impact: A source item can be classified as publishable but still be omitted from Telegram messages, producing a false no-event message.
+- Local fix:
+  - `load_publishable_message_events` now uses `publish_candidate=True` as the final message eligibility contract and no longer re-filters by `validation_status == "valid"`.
+  - Regression coverage now checks that the message query does not add the stale validation-status filter.
+  - Live-source smoke after the fix returned `MESSAGE_EVENT_COUNT=1` and included Ara Waterway notice `1217` in the generated fallback message.
+- Next step: confirm the next natural production run sends the Ara Waterway active closure message if notice `1217` is still active at the source.
+
 ### Active event can be missed when the raw source item is a duplicate from a prior run
 
 - 2026-07-18 live-source smoke found Ara Waterway notice `1217` as a publishable active weather closure for the 2026-07-18 07:30 KST batch window.
