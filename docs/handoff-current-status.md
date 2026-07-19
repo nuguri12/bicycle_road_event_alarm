@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-14
+Last updated: 2026-07-19
 
 ## Purpose
 
@@ -11,7 +11,7 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing, message-stage run correlation, and the 2026-07-10 formatting-gate recovery are documented.
+- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing, message-stage run correlation, the 2026-07-10 formatting-gate recovery, and the 2026-07-19 Ara Waterway false no-event fixes are documented.
 - Check `git status --short` before editing.
 
 ## Project Goal
@@ -22,7 +22,7 @@ The service collects public traffic-control and event information that may affec
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
-As of 2026-07-14, the Cloudflare-triggered daily production path is considered MVP-stable after seven verified successful natural production runs since the 2026-07-06 prepared-statement fix. The separate 2026-07-10 formatting-gate incident was recovered and resolved.
+As of 2026-07-19, the Cloudflare-triggered daily production path is operational, but the next natural run must verify the latest Ara Waterway false no-event fixes. The 2026-07-19 local fixes are commits `461154a` and `a3685b3`.
 
 ## Current Operational Status
 
@@ -83,7 +83,13 @@ Latest natural production observation:
   - At the time of the fix, local live-source normalization produced `PUBLISH_COUNT=1` for notice `1224`.
   - Current source state no longer publishes it because notice `1224` is now marked `[개방완료]`.
 - The 2026-07-11 through 2026-07-14 natural Cloudflare-triggered daily runs completed and published no-event Telegram messages successfully.
-- The MVP production path remains stable as of 2026-07-14.
+- The 2026-07-18/2026-07-19 source/message review found a false no-event path for active Ara Waterway notice `1217`:
+  - Live source returned 17 candidates, no failures, and notice `1217` normalized to `publish_candidate=True`.
+  - Manual workflow run on commit `461154a` emitted `RUN_ID=770e519e-95b4-4df2-b67f-3bdd3aac99da`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_EVENT_COUNT=0`, and `MESSAGE_CONTEXT=no_event`.
+  - Commit `461154a` refreshes duplicate raw observations into the current run and updates duplicate normalized rows.
+  - Commit `a3685b3` removes the stale message-query `validation_status == "valid"` filter so `publish_candidate=True` is the final message eligibility contract.
+  - Local live-source smoke after `a3685b3` produced `MESSAGE_EVENT_COUNT=1` and included Ara Waterway notice `1217` in the generated message.
+- The MVP production path needs one natural 07:30 KST verification run after commit `a3685b3`.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -141,6 +147,8 @@ Important behavior:
 - `ingest_raw_events` always emits `RUN_ID=<uuid>`.
 - `normalize_events --run-id` processes only raw events from the current ingest run.
 - `generate_messages --run-id` selects publishable events only from the current ingest run.
+- Duplicate raw observations refresh their existing row into the current ingest run, and duplicate normalized events update their existing row.
+- Message generation treats `publish_candidate=True` as the final alert eligibility contract; high-impact `needs_review` candidates are no longer excluded by a message-stage `validation_status == "valid"` filter.
 - Empty publishable event sets generate a dated KST no-event message.
 - Publish candidates are limited to events active on the KST date when they were fetched.
 - Non-empty publish outcomes are recorded in `publish_attempts` for `success`, `failed`, and `skipped`.
@@ -326,6 +334,36 @@ python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
 
 ## Latest Verification Baseline
 
+Latest full local verification after the 2026-07-19 message candidate fix:
+
+```text
+python -m pytest -q
+96 passed
+
+python -m ruff check .
+All checks passed!
+
+python -m mypy src tests
+Success: no issues found in 70 source files
+
+python -m black --check .
+73 files would be left unchanged
+
+python -m compileall -q src tests
+success
+```
+
+Latest live-source smoke after commit `a3685b3`:
+
+```text
+LIVE_CANDIDATES=17
+LIVE_FAILURES={}
+MESSAGE_EVENT_COUNT=1
+MESSAGE_HAS_ARA_1217=True
+TELEGRAM_STATUS=skipped
+TELEGRAM_REASON=dry_run
+```
+
 Latest full local verification after the prepared-statement fix:
 
 ```text
@@ -394,6 +432,7 @@ After the current local changes are pushed, check GitHub Actions:
    - `MESSAGE_SOURCE=openai` or `MESSAGE_SOURCE=fallback`
    - `MESSAGE_EVENT_COUNT=<number>` where only same-day KST active events should count
    - `TELEGRAM_STATUS=success`, `failed`, or `skipped`
+   - For the first natural production run after commit `a3685b3`, if Ara Waterway notice `1217` is still active, expect `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
 
 Check Supabase:
 
@@ -414,7 +453,8 @@ limit 10;
 ## Known Risks
 
 - GitHub Actions native schedule was unreliable in this project.
-- Cloudflare Workers Cron now owns the production trigger and has produced seven verified successful natural daily runs after the 2026-07-06 prepared-statement incident.
+- Cloudflare Workers Cron now owns the production trigger and has produced verified successful natural daily runs after the 2026-07-06 prepared-statement incident.
+- The first natural production run after commit `a3685b3` still needs verification. If Ara Waterway notice `1217` remains active, the run should publish an event alert rather than a no-event message.
 - Ara Waterway parser precision has been improved for the current K-water board DOM, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by a separate section line, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
 - Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
@@ -425,8 +465,9 @@ limit 10;
 
 ## Recommended Next Tasks
 
-1. Continue light monitoring of daily 07:30 KST Cloudflare-triggered production runs.
-2. Monitor Ara Waterway live-source precision and add fixtures if K-water markup changes again.
-3. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-4. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
-5. Treat Hangang notice detail fetching as lower priority unless real source coverage gaps recur.
+1. Verify the next 07:30 KST Cloudflare-triggered production run after commit `a3685b3`.
+2. Continue light monitoring of daily 07:30 KST Cloudflare-triggered production runs.
+3. Monitor Ara Waterway live-source precision and add fixtures only if K-water markup changes again.
+4. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+5. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+6. Treat Hangang notice detail fetching as lower priority unless real source coverage gaps recur.

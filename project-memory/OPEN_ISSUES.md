@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-19
 
-## Must Resolve Soon
+## Awaiting Production Verification
 
 ### Message query excludes high-impact needs-review publish candidates
 
@@ -26,7 +26,7 @@ Last updated: 2026-07-19
   - `load_publishable_message_events` now uses `publish_candidate=True` as the final message eligibility contract and no longer re-filters by `validation_status == "valid"`.
   - Regression coverage now checks that the message query does not add the stale validation-status filter.
   - Live-source smoke after the fix returned `MESSAGE_EVENT_COUNT=1` and included Ara Waterway notice `1217` in the generated fallback message.
-- Next step: confirm the next natural production run sends the Ara Waterway active closure message if notice `1217` is still active at the source.
+- Next step: confirm the next natural production run after commit `a3685b3` sends the Ara Waterway active closure message if notice `1217` is still active at the source.
 
 ### Active event can be missed when the raw source item is a duplicate from a prior run
 
@@ -45,7 +45,7 @@ Last updated: 2026-07-19
   - Duplicate raw observations now refresh the existing `raw_events` row with the current ingest `run_id`, latest raw fields, and latest `fetched_at`.
   - Duplicate normalized events now update the existing `normalized_events` row with the latest normalized fields.
   - Regression tests cover both update paths.
-- Next step: push the fix and confirm the next production run includes currently active duplicate source items in message candidate selection.
+- Next step: confirm the next production run includes currently active duplicate source items in message candidate selection. The fix has been pushed in commit `461154a`.
 
 ## Operational Risks
 

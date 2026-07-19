@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-10
+Last updated: 2026-07-19
 
 ## Role
 
@@ -21,6 +21,16 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-07-19: Active Ara Waterway closure omitted from Telegram message
+
+- Symptom: The user received a no-event Telegram message even though live source checks showed active Ara Waterway notice `1217` for a bicycle-road/weather closure.
+- Impact: The daily alert could miss an active high-impact cycling-road closure and tell users there were no caution events.
+- Root cause: Two filters conflicted with the intended runtime contract. First, duplicate raw source observations were tied to prior runs, while normalization/message generation were scoped to the current ingest run. Second, message selection re-filtered candidates with `validation_status == "valid"`, excluding high-impact `needs_review` rows even after normalization had marked them `publish_candidate=True`.
+- Fix: Commit `461154a` refreshes duplicate raw observations into the current run and updates duplicate normalized rows. Commit `a3685b3` removes the stale message-query `validation_status == "valid"` filter so `publish_candidate=True` is the final alert eligibility contract.
+- Verification: Local checks after `a3685b3` passed: `python -m pytest -q` reported `96 passed`; targeted messaging repository tests passed; live-source dry-run smoke returned 17 candidates, no source failures, `MESSAGE_EVENT_COUNT=1`, and included Ara Waterway notice `1217`; Telegram publisher smoke reached `dry_run`.
+- Prevention: For future false no-event reports, compare live source candidates, normalized `publish_candidate`, message query eligibility, and final `MESSAGE_EVENT_COUNT` before changing parser logic. Do not add a second eligibility filter after normalization unless it is explicitly part of the `publish_candidate` contract.
+- Follow-up: Confirm the next natural 07:30 KST production run after commit `a3685b3`. If notice `1217` remains active, expect `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
 
 ## 2026-07-10: Telegram message missing because formatting gate stopped production batch
 

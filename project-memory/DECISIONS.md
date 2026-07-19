@@ -1,6 +1,13 @@
 # Decisions
 
-Last updated: 2026-07-14
+Last updated: 2026-07-19
+
+## 2026-07-19: Treat `publish_candidate=True` as the final message eligibility contract
+
+- Decision: Message generation should select normalized rows by `publish_candidate=True` plus allowed cyclist impact level, without re-filtering by `validation_status == "valid"`.
+- Reason: Normalization intentionally allows active high-impact bicycle-route closures with missing precise location as `publish_candidate=True`. A second message-stage `valid` filter excluded Ara Waterway notice `1217` and produced a false no-event result.
+- Alternatives considered: Add Ara-specific location keywords; keep `valid` filtering and special-case `needs_review`; redesign validation statuses.
+- Impact: High-impact `needs_review` bicycle-route closures can appear in Telegram messages with a generic location such as `구간 확인 필요`. False positives should be handled by tightening normalization, not by adding another message-stage eligibility filter.
 
 ## 2026-07-14: Defer SNS expansion until source quality and personal Telegram delivery are stable
 
