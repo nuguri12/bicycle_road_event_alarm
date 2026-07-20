@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-19
+Last updated: 2026-07-20
 
 ## Role
 
@@ -29,8 +29,9 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Root cause: Two filters conflicted with the intended runtime contract. First, duplicate raw source observations were tied to prior runs, while normalization/message generation were scoped to the current ingest run. Second, message selection re-filtered candidates with `validation_status == "valid"`, excluding high-impact `needs_review` rows even after normalization had marked them `publish_candidate=True`.
 - Fix: Commit `461154a` refreshes duplicate raw observations into the current run and updates duplicate normalized rows. Commit `a3685b3` removes the stale message-query `validation_status == "valid"` filter so `publish_candidate=True` is the final alert eligibility contract.
 - Verification: Local checks after `a3685b3` passed: `python -m pytest -q` reported `96 passed`; targeted messaging repository tests passed; live-source dry-run smoke returned 17 candidates, no source failures, `MESSAGE_EVENT_COUNT=1`, and included Ara Waterway notice `1217`; Telegram publisher smoke reached `dry_run`.
+- Production verification: The 2026-07-20 07:30 KST natural run `29706279968` on commit `75f346e` completed successfully with `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, `TELEGRAM_STATUS=success`, and `TELEGRAM_MESSAGE_ID=29`. The generated Telegram text matched Ara Waterway notice `1217`, and a live source cross-check found exactly one publish candidate: notice `1217`.
 - Prevention: For future false no-event reports, compare live source candidates, normalized `publish_candidate`, message query eligibility, and final `MESSAGE_EVENT_COUNT` before changing parser logic. Do not add a second eligibility filter after normalization unless it is explicitly part of the `publish_candidate` contract.
-- Follow-up: Confirm the next natural 07:30 KST production run after commit `a3685b3`. If notice `1217` remains active, expect `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
+- Follow-up: Resolved on 2026-07-20. Separate precision follow-up was also resolved locally on 2026-07-20: Ara Waterway bridge/section names extracted into `raw_location_text` now normalize to message-ready locations with `region=경기`.
 
 ## 2026-07-10: Telegram message missing because formatting gate stopped production batch
 

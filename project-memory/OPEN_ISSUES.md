@@ -1,51 +1,6 @@
 # Open Issues
 
-Last updated: 2026-07-19
-
-## Awaiting Production Verification
-
-### Message query excludes high-impact needs-review publish candidates
-
-- 2026-07-19 manual workflow on commit `461154a` produced:
-  - `RUN_ID=770e519e-95b4-4df2-b67f-3bdd3aac99da`
-  - `RAW_EVENTS_SAVED=0`
-  - `NORMALIZED_EVENTS_SAVED=0`
-  - `MESSAGE_EVENT_COUNT=0`
-  - `MESSAGE_CONTEXT=no_event`
-- Live source cross-check immediately after the run found 17 candidates, no source failures, and Ara Waterway notice `1217` as a publish candidate.
-- The notice normalized to:
-  - `publish_candidate=True`
-  - `validation_status=needs_review`
-  - `location_name=구간 확인 필요`
-  - `cyclist_impact_level=high`
-- Root cause:
-  - `normalize_raw_event` intentionally allows high-impact bicycle-road closures without precise location as publish candidates.
-  - `load_publishable_message_events` then filters SQL results with `NormalizedEvent.validation_status == "valid"`, excluding that publish candidate before message generation.
-- Impact: A source item can be classified as publishable but still be omitted from Telegram messages, producing a false no-event message.
-- Local fix:
-  - `load_publishable_message_events` now uses `publish_candidate=True` as the final message eligibility contract and no longer re-filters by `validation_status == "valid"`.
-  - Regression coverage now checks that the message query does not add the stale validation-status filter.
-  - Live-source smoke after the fix returned `MESSAGE_EVENT_COUNT=1` and included Ara Waterway notice `1217` in the generated fallback message.
-- Next step: confirm the next natural production run after commit `a3685b3` sends the Ara Waterway active closure message if notice `1217` is still active at the source.
-
-### Active event can be missed when the raw source item is a duplicate from a prior run
-
-- 2026-07-18 live-source smoke found Ara Waterway notice `1217` as a publishable active weather closure for the 2026-07-18 07:30 KST batch window.
-- The Telegram message received by the user said there were no alert events, so source state and user-facing message are inconsistent.
-- Likely root cause:
-  - `save_raw_event_candidates` skips rows whose `content_hash` already exists.
-  - The workflow scopes normalization and message generation to the current ingest `RUN_ID`.
-  - If an open-ended or multi-day notice was already stored in a previous run, the current run may save `RAW_EVENTS_SAVED=0`.
-  - `generate_messages --run-id <current_run>` then queries only normalized events joined to raw rows from the current run and misses still-active duplicate source items.
-- Evidence:
-  - Live source returned 17 candidates and no source failures.
-  - Ara Waterway notice `1217` (`https://www.kwater.or.kr/giwaterway/ara/BBSMSTR_000000000021/1217/view.do`) normalized to `publish_candidate=True` for 2026-07-18 07:30 KST.
-  - 2026-07-19 live-source smoke again returned 17 candidates, no source failures, and the same Ara Waterway notice `1217` normalized to `publish_candidate=True` for the 2026-07-19 07:31 KST batch window.
-- Local fix:
-  - Duplicate raw observations now refresh the existing `raw_events` row with the current ingest `run_id`, latest raw fields, and latest `fetched_at`.
-  - Duplicate normalized events now update the existing `normalized_events` row with the latest normalized fields.
-  - Regression tests cover both update paths.
-- Next step: confirm the next production run includes currently active duplicate source items in message candidate selection. The fix has been pushed in commit `461154a`.
+Last updated: 2026-07-20
 
 ## Operational Risks
 

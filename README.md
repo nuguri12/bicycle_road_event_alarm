@@ -26,6 +26,8 @@
 
 이벤트가 없을 때도 배치 작동 여부를 확인할 수 있도록 날짜와 시간이 포함된 no-event 메시지를 생성합니다.
 
+현재 운영 로직은 같은 공지가 여러 날 반복 관찰되는 경우에도 최신 수집 run으로 raw/normalized row를 갱신해, 장기 또는 기상 조건부 통제 공지가 현재 배치 메시지에서 누락되지 않도록 처리합니다. 메시지 후보 선정은 `publish_candidate=True`를 최종 계약으로 사용하며, 아라뱃길 공지에서 추출한 교량/수로/전망대 구간명은 정규화된 location으로 보존합니다.
+
 예시:
 
 ```text
@@ -161,6 +163,12 @@ apply_migrations=false
 ```
 
 DB 마이그레이션은 운영 배치와 분리되어 있습니다. 필요한 경우에만 수동 workflow 실행에서 `apply_migrations=true`를 선택합니다.
+
+최근 운영 확인:
+
+- 2026-07-20 07:30 KST 자연 실행에서 Ara Waterway 공지 `1217`이 `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, `TELEGRAM_STATUS=success`로 발행되었습니다.
+- 같은 source live smoke에서 후보 18건, source failure 0건, publish 후보 1건이 확인되었고, publish 후보는 공지 `1217`과 일치했습니다.
+- 이후 정규화 로직은 Ara Waterway detail의 명시적 차단구간을 `location_name`으로 보존하도록 개선되었습니다.
 
 ## 6. 환경 변수와 비밀값
 

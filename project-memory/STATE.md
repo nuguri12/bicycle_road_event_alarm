@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-19
+Last updated: 2026-07-20
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering remains stable, but 2026-07-18/2026-07-19 source/message checks found and locally fixed a false no-event path for active Ara Waterway closures. Continue light monitoring of the next 07:30 KST natural production run before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering remains stable, and the 2026-07-20 natural production run confirmed the 2026-07-19 active Ara Waterway closure fix in production. Ara Waterway detail section locations now normalize to message-ready locations instead of `구간 확인 필요` when explicit bridge/section text is present. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -40,6 +40,7 @@ MVP daily triggering remains stable, but 2026-07-18/2026-07-19 source/message ch
 - Natural Cloudflare-triggered run on 2026-07-14 completed and published a no-event Telegram message successfully on commit `ec71518`.
 - Natural Cloudflare-triggered run on 2026-07-15 completed and published a no-event Telegram message successfully on commit `cecc804`.
 - Natural Cloudflare-triggered run on 2026-07-16 completed and published a no-event Telegram message successfully on commit `e943e3e`.
+- Natural Cloudflare-triggered run on 2026-07-20 completed and published an Ara Waterway event alert successfully on commit `75f346e`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -63,6 +64,7 @@ MVP daily triggering remains stable, but 2026-07-18/2026-07-19 source/message ch
 - Duplicate raw source observations refresh the existing `raw_events` row to the current ingest `run_id`, latest raw fields, and latest `fetched_at`.
 - Duplicate normalized events update the existing `normalized_events` row with the latest normalized fields.
 - Message candidate selection treats `publish_candidate=True` as the final alert eligibility contract; high-impact `needs_review` candidates are no longer discarded by a stale `validation_status == "valid"` message query filter.
+- Ara Waterway bridge/section names extracted into `raw_location_text` are preserved as normalized locations with `region=경기`, even when they do not contain the generic 서울/경기 keyword list.
 
 ## Known Current Observations
 
@@ -124,23 +126,28 @@ MVP daily triggering remains stable, but 2026-07-18/2026-07-19 source/message ch
   - Manual workflow run on commit `461154a` emitted `RUN_ID=770e519e-95b4-4df2-b67f-3bdd3aac99da`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_EVENT_COUNT=0`, and `MESSAGE_CONTEXT=no_event`.
   - Root causes were fixed in commits `461154a` and `a3685b3`.
   - Local verification after `a3685b3` passed with `96 passed`, and live-source dry-run smoke produced `MESSAGE_EVENT_COUNT=1` with Ara Waterway notice `1217` in the generated message.
+- The 2026-07-20 07:30 KST daily run `29706279968` verified the Ara Waterway notice `1217` fix in production:
+  - Commit: `75f346e`
+  - `RUN_ID=2f43dc66-a93b-485a-bf2b-a327dc3b878e`, `RAW_EVENTS_SAVED=0`, `NORMALIZED_EVENTS_SAVED=0`, `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, `MESSAGE_SOURCE=openai`, `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=29`.
+  - Telegram text matched the publishable source item for notice `1217`: active 2026-07-17 Ara Waterway bicycle-road, Aramaru observatory, and Ara waterfall closure until weather conditions improve.
+  - Live source cross-check found 18 candidates, no source failures, and exactly 1 publish candidate: Ara Waterway notice `1217`.
+- Ara Waterway notice `1217` location precision follow-up was fixed locally on 2026-07-20:
+  - `raw_location_text` sections such as `시천교~계양대교 남, 북측 자전거도로; 굴포천 연결수로 좌안(서측) 자전거도로; 아라마루 전망대 및 아라폭포` now normalize as `location_name` with `region=경기` and `validation_status=valid`.
+  - Live-source smoke after the fix found 18 candidates, no source failures, exactly 1 publish candidate, and preserved the detailed Ara blocked sections as `location_name`.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions
 
-1. Confirm the next natural 07:30 KST production run after commit `a3685b3`:
-   - If Ara Waterway notice `1217` is still active at the source, expect `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
-   - If notice `1217` is no longer active or is marked completed, a no-event message may be correct.
-2. Continue light monitoring of daily 07:30 KST production runs.
-3. Stabilize parsing before adding product features:
+1. Continue light monitoring of daily 07:30 KST production runs.
+2. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.
-4. Add only one new regional source after parser stability improves.
-5. Add Telegram personal chat delivery before web or SNS:
+3. Add only one new regional source after parser stability improves.
+4. Add Telegram personal chat delivery before web or SNS:
    - Start with `/start`, `/stop`, stored `chat_id`, and `enabled` status.
    - Defer complex preferences; first personalization should be a simple region choice.
-6. Build a minimal web/admin surface only after Telegram personal delivery works.
-7. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
-8. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-9. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+5. Build a minimal web/admin surface only after Telegram personal delivery works.
+6. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
+7. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+8. Revisit no-event message dedupe only if daily no-event confirmations become noisy.

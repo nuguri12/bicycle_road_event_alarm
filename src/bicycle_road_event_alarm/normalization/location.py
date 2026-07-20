@@ -23,6 +23,17 @@ SEOUL_KEYWORDS = (
     "안양천",
 )
 GYEONGGI_KEYWORDS = ("고양", "하남", "구리", "남양주", "성남", "과천", "안양", "광명", "부천")
+ARA_WATERWAY_LOCATION_KEYWORDS = (
+    "아라",
+    "계양대교",
+    "시천교",
+    "귤현대교",
+    "목상교",
+    "청운교",
+    "벌말교",
+    "굴포천",
+    "수향원",
+)
 
 
 # 장소 추출: raw_location_text를 우선하고, 없으면 본문과 제목에서 주요 지명을 찾습니다.
@@ -31,7 +42,24 @@ def extract_location(
     raw_body: str | None,
     raw_title: str | None,
 ) -> ExtractedLocation:
-    for source_text in (raw_location_text, raw_body, raw_title):
+    if raw_location_text is not None:
+        text = " ".join(raw_location_text.split())
+        if text != "":
+            region = _detect_region(text)
+            if region is not None:
+                return ExtractedLocation(
+                    location_name=text,
+                    region=region,
+                    reason=f"{region} 주요 지명 감지",
+                )
+            if _is_ara_waterway_location(text):
+                return ExtractedLocation(
+                    location_name=text,
+                    region="경기",
+                    reason="아라뱃길 구간명 감지",
+                )
+
+    for source_text in (raw_body, raw_title):
         if source_text is None:
             continue
         text = " ".join(source_text.split())
@@ -58,3 +86,7 @@ def _detect_region(text: str) -> str | None:
     if any(keyword in text for keyword in GYEONGGI_KEYWORDS):
         return "경기"
     return None
+
+
+def _is_ara_waterway_location(text: str) -> bool:
+    return any(keyword in text for keyword in ARA_WATERWAY_LOCATION_KEYWORDS)

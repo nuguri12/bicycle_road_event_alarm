@@ -35,6 +35,20 @@ def test_extract_location_prefers_raw_location_text() -> None:
     assert result.region == "서울"
 
 
+def test_extract_location_preserves_ara_waterway_sections() -> None:
+    location_text = (
+        "시천교~계양대교 남, 북측 자전거도로; "
+        "굴포천 연결수로 좌안(서측) 자전거도로; "
+        "아라마루 전망대 및 아라폭포"
+    )
+
+    result = extract_location(location_text, None, None)
+
+    assert result.location_name == location_text
+    assert result.region == "경기"
+    assert result.reason == "아라뱃길 구간명 감지"
+
+
 def test_classify_event_detects_road_closure_high_impact() -> None:
     result = classify_event("한강 교통통제 안내", "자전거도로 교통통제 예정")
 
