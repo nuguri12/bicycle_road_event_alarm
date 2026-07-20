@@ -38,18 +38,50 @@ def save_normalized_events(session: Session, raw_events: list[RawEvent]) -> int:
     saved_count = 0
     for raw_event in raw_events:
         normalized = normalize_raw_event(raw_event)
-        existing = session.scalar(
+        existing_for_raw_event = list(
+            session.scalars(
+                select(NormalizedEvent).where(
+                    NormalizedEvent.raw_event_id == normalized.raw_event_id
+                )
+            ).all()
+        )
+        if existing_for_raw_event:
+            existing_for_raw = _preferred_existing_normalized_event(
+                existing_for_raw_event,
+                normalized,
+            )
+            update_normalized_event(existing_for_raw, normalized)
+            for stale in existing_for_raw_event:
+                if stale is not existing_for_raw:
+                    session.delete(stale)
+            continue
+
+        existing_for_duplicate_key = session.scalar(
             select(NormalizedEvent).where(
                 NormalizedEvent.deterministic_duplicate_key
                 == normalized.deterministic_duplicate_key
             )
         )
-        if existing is not None:
-            update_normalized_event(existing, normalized)
+        if existing_for_duplicate_key is not None:
+            update_normalized_event(existing_for_duplicate_key, normalized)
             continue
         session.add(normalized_data_to_model(normalized))
         saved_count += 1
     return saved_count
+
+
+def _preferred_existing_normalized_event(
+    existing_events: list[NormalizedEvent],
+    data: NormalizedEventData,
+) -> NormalizedEvent:
+    return next(
+        (
+            event
+            for event in existing_events
+            if event.deterministic_duplicate_key == data.deterministic_duplicate_key
+        ),
+        existing_events[0],
+    )
 
 
 def update_normalized_event(
@@ -66,5 +98,6 @@ def update_normalized_event(
     existing.cyclist_impact_level = data.cyclist_impact_level
     existing.cyclist_impact_reason = data.cyclist_impact_reason
     existing.publish_candidate = data.publish_candidate
+    existing.deterministic_duplicate_key = data.deterministic_duplicate_key
     existing.validation_status = data.validation_status
     existing.updated_at = datetime.now(UTC)

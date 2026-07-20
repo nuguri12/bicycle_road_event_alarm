@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering remains stable, and the 2026-07-20 natural production run confirmed the 2026-07-19 active Ara Waterway closure fix in production. Ara Waterway detail section locations now normalize to message-ready locations instead of `구간 확인 필요` when explicit bridge/section text is present. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering remains stable, and the 2026-07-20 natural production run confirmed the 2026-07-19 active Ara Waterway closure fix in production. A 2026-07-21 duplicate-message follow-up found that old and new normalized rows for the same Ara Waterway raw event could both remain publishable after location precision improved; local code now updates by `raw_event_id` first and deletes stale same-raw normalized rows. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -63,6 +63,7 @@ MVP daily triggering remains stable, and the 2026-07-20 natural production run c
 - Message-stage run summaries now include the ingest run id when message generation is scoped with `--run-id`, which makes ingest/message/publish correlation easier during operations review.
 - Duplicate raw source observations refresh the existing `raw_events` row to the current ingest `run_id`, latest raw fields, and latest `fetched_at`.
 - Duplicate normalized events update the existing `normalized_events` row with the latest normalized fields.
+- Normalized saves now prefer updating the existing row for the same `raw_event_id` and remove stale same-raw normalized duplicates before falling back to deterministic duplicate key matching.
 - Message candidate selection treats `publish_candidate=True` as the final alert eligibility contract; high-impact `needs_review` candidates are no longer discarded by a stale `validation_status == "valid"` message query filter.
 - Ara Waterway bridge/section names extracted into `raw_location_text` are preserved as normalized locations with `region=경기`, even when they do not contain the generic 서울/경기 keyword list.
 
@@ -134,12 +135,17 @@ MVP daily triggering remains stable, and the 2026-07-20 natural production run c
 - Ara Waterway notice `1217` location precision follow-up was fixed locally on 2026-07-20:
   - `raw_location_text` sections such as `시천교~계양대교 남, 북측 자전거도로; 굴포천 연결수로 좌안(서측) 자전거도로; 아라마루 전망대 및 아라폭포` now normalize as `location_name` with `region=경기` and `validation_status=valid`.
   - Live-source smoke after the fix found 18 candidates, no source failures, exactly 1 publish candidate, and preserved the detailed Ara blocked sections as `location_name`.
+- The 2026-07-21 user-reported Telegram message contained duplicate Ara Waterway notice `1217` entries with the same URL but different locations (`경기(...)` and `구간 확인 필요`):
+  - Root cause: `normalized_events` dedupe used a key containing location/region, so the old `구간 확인 필요` row and the new detailed-location row could coexist for the same refreshed `raw_event_id`.
+  - Local fix: `save_normalized_events` now updates same-raw normalized rows first, deletes stale same-raw duplicates, and updates the deterministic duplicate key during refresh.
+  - Verification: `python -m pytest -q` reported `99 passed`; `python -m ruff check .` and `python -m black --check .` passed.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions
 
 1. Continue light monitoring of daily 07:30 KST production runs.
+   - After pushing the 2026-07-21 same-raw normalized dedupe fix, verify the next run publishes Ara Waterway notice `1217` at most once if it remains active.
 2. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.

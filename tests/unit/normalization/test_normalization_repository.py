@@ -58,6 +58,7 @@ def test_save_normalized_events_updates_existing_duplicate_key() -> None:
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
         updated_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
+    session.scalars.return_value.all.return_value = []
     session.scalar.return_value = existing
 
     saved_count = save_normalized_events(session, [raw_event])
@@ -71,3 +72,56 @@ def test_save_normalized_events_updates_existing_duplicate_key() -> None:
     assert existing.publish_candidate == normalized.publish_candidate
     assert existing.validation_status == normalized.validation_status
     assert existing.updated_at > datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def test_save_normalized_events_updates_existing_raw_event_and_removes_stale_rows() -> None:
+    session = Mock()
+    raw_event = make_repository_raw_event()
+    normalized = normalize_raw_event(raw_event)
+    stale = NormalizedEvent(
+        id=uuid.uuid4(),
+        raw_event_id=raw_event.id,
+        title=normalized.title,
+        start_datetime=normalized.start_datetime,
+        end_datetime=normalized.end_datetime,
+        location_name="구간 확인 필요",
+        region="unknown",
+        event_type=normalized.event_type,
+        cyclist_impact_level=normalized.cyclist_impact_level,
+        cyclist_impact_reason=normalized.cyclist_impact_reason,
+        publish_candidate=True,
+        deterministic_duplicate_key="old-location-key",
+        validation_status="needs_review",
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    duplicate_stale = NormalizedEvent(
+        id=uuid.uuid4(),
+        raw_event_id=raw_event.id,
+        title="older duplicate",
+        start_datetime=datetime(2026, 1, 1, tzinfo=UTC),
+        end_datetime=None,
+        location_name="구간 확인 필요",
+        region="unknown",
+        event_type="road_closure",
+        cyclist_impact_level="high",
+        cyclist_impact_reason=None,
+        publish_candidate=True,
+        deterministic_duplicate_key="older-location-key",
+        validation_status="needs_review",
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    session.scalars.return_value.all.return_value = [stale, duplicate_stale]
+    session.scalar.return_value = None
+
+    saved_count = save_normalized_events(session, [raw_event])
+
+    assert saved_count == 0
+    session.add.assert_not_called()
+    session.delete.assert_called_once_with(duplicate_stale)
+    assert stale.raw_event_id == raw_event.id
+    assert stale.location_name == normalized.location_name
+    assert stale.region == normalized.region
+    assert stale.validation_status == normalized.validation_status
+    assert stale.deterministic_duplicate_key == normalized.deterministic_duplicate_key

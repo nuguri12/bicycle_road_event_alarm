@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Purpose
 
@@ -11,7 +11,7 @@ This document is the handoff note for another local Codex session. It summarizes
 - Repository: `https://github.com/nuguri12/bicycle_road_event_alarm.git`
 - Active branch: `main`
 - Branch strategy: the user approved direct development on `main`
-- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing/location precision, message-stage run correlation, the 2026-07-10 formatting-gate recovery, and the 2026-07-19 Ara Waterway false no-event fixes are documented.
+- Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing/location precision, message-stage run correlation, the 2026-07-10 formatting-gate recovery, the 2026-07-19 Ara Waterway false no-event fixes, and the 2026-07-21 same-raw normalized dedupe fix are documented.
 - Check `git status --short` before editing.
 
 ## Project Goal
@@ -22,7 +22,7 @@ The service collects public traffic-control and event information that may affec
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
-As of 2026-07-20, the Cloudflare-triggered daily production path is operational. The 2026-07-20 natural run verified the latest Ara Waterway false no-event fixes in production, and local normalization now preserves explicit Ara Waterway blocked sections as message-ready locations.
+As of 2026-07-21, the Cloudflare-triggered daily production path is operational. The 2026-07-20 natural run verified the latest Ara Waterway false no-event fixes in production, local normalization preserves explicit Ara Waterway blocked sections as message-ready locations, and a local same-raw normalized dedupe fix prevents stale `구간 확인 필요` rows from coexisting with improved detailed-location rows for the same raw source event.
 
 ## Current Operational Status
 
@@ -105,6 +105,11 @@ Latest natural production observation:
   - `시천교~계양대교 남, 북측 자전거도로`
   - `굴포천 연결수로 좌안(서측) 자전거도로`
   - `아라마루 전망대 및 아라폭포`
+- A 2026-07-21 duplicate-message follow-up fixed local normalization persistence:
+  - Symptom: one message could include both detailed-location and stale `구간 확인 필요` entries for Ara Waterway notice `1217`.
+  - Root cause: `deterministic_duplicate_key` included location/region, so old and new normalized rows for the same `raw_event_id` could coexist after location precision improved.
+  - Fix: `save_normalized_events` now updates same-raw normalized rows first, deletes stale same-raw duplicates, and updates the duplicate key on refresh.
+  - Verification: `python -m pytest -q` reported `99 passed`; `python -m ruff check .` and `python -m black --check .` passed.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -455,7 +460,7 @@ After the current local changes are pushed, check GitHub Actions:
    - `MESSAGE_SOURCE=openai` or `MESSAGE_SOURCE=fallback`
    - `MESSAGE_EVENT_COUNT=<number>` where only same-day KST active events should count
    - `TELEGRAM_STATUS=success`, `failed`, or `skipped`
-   - If Ara Waterway notice `1217` is still active after the location precision fix is pushed, expect `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, `TELEGRAM_STATUS=success`, and a message location that includes the detailed blocked sections rather than `구간 확인 필요`.
+   - If Ara Waterway notice `1217` is still active after the 2026-07-21 same-raw normalized dedupe fix is pushed, expect one source entry for URL `1217`, `MESSAGE_CONTEXT=event_alert`, `TELEGRAM_STATUS=success`, and a message location that includes the detailed blocked sections rather than the stale `구간 확인 필요` row.
 
 Check Supabase:
 
@@ -478,7 +483,7 @@ limit 10;
 - GitHub Actions native schedule was unreliable in this project.
 - Cloudflare Workers Cron now owns the production trigger and has produced verified successful natural daily runs after the 2026-07-06 prepared-statement incident.
 - The first natural production run after commit `a3685b3` was verified on 2026-07-20 with `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
-- The Ara Waterway location precision fix is locally verified, but still needs the next production run after push to confirm that Telegram output includes detailed blocked sections instead of `구간 확인 필요`.
+- The Ara Waterway location precision fix produced detailed blocked sections in the user-facing message, but the 2026-07-21 duplicate-message issue showed a stale `구간 확인 필요` normalized row could coexist with the detailed row for the same source. The same-raw normalized dedupe fix needs the next production run after push to confirm URL `1217` appears at most once.
 - Ara Waterway parser precision has been improved for the current K-water board DOM, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by a separate section line, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
 - Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.

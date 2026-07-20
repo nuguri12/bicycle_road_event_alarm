@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Role
 
@@ -21,6 +21,16 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-07-21: Duplicate Ara Waterway source in one Telegram message
+
+- Symptom: One Telegram message contained two entries for Ara Waterway notice `1217` with the same source URL: one detailed-location entry and one stale `구간 확인 필요` entry.
+- Impact: The alert over-reported one source event as two events, reducing message trust.
+- Root cause: `raw_events` correctly refreshes duplicate source observations by content hash, but `normalized_events` dedupe used `deterministic_duplicate_key`, which includes `location_name` and `region`. After Ara Waterway location precision improved, the same `raw_event_id` could have both the old `구간 확인 필요|unknown` normalized row and the new detailed-location `경기` row. Message selection joins normalized rows to the refreshed raw row, so both remained eligible in the current run.
+- Fix: Local `save_normalized_events` now looks for existing rows by `raw_event_id` first, updates the preferred same-raw row, deletes stale same-raw normalized duplicates, and updates the deterministic duplicate key during refresh.
+- Verification: Added a regression test for same-raw normalized stale-row cleanup. `python -m pytest -q` reported `99 passed`; `python -m ruff check .` and `python -m black --check .` passed.
+- Prevention: Do not rely only on location-bearing deterministic keys when refreshing normalized data from a stable raw source. Keep one normalized row per raw source observation unless the data model explicitly supports one-to-many normalization.
+- Follow-up: Push the fix and verify the next production run publishes notice `1217` at most once if it remains active. Optional DB cleanup may be needed if the next run does not process the same raw event before message generation.
 
 ## 2026-07-19: Active Ara Waterway closure omitted from Telegram message
 

@@ -1,8 +1,15 @@
 # Open Issues
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 
 ## Operational Risks
+
+### Verify same-raw normalized dedupe in production
+
+- A 2026-07-21 user-reported Telegram message contained two entries for Ara Waterway notice `1217` with the same URL: one detailed-location row and one stale `구간 확인 필요` row.
+- Local code now updates/deletes normalized rows by `raw_event_id` before duplicate-key fallback.
+- Next step: after pushing the fix, verify the next production run has at most one message item per `raw_event_id`/source URL.
+- Optional cleanup if needed before the next run: mark or delete the stale `구간 확인 필요` normalized row for notice `1217` in Supabase.
 
 ### Ara Waterway parser precision
 
