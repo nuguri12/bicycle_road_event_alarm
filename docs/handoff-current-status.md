@@ -484,6 +484,7 @@ limit 10;
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
 - Message-stage run summaries now include the ingest run id when `generate_messages --run-id` is used; add a dedicated batch correlation id only if manual operations review remains painful.
 - HTML/API parsers are fixture-driven and may require fixture updates when source pages change.
+- The current crawler stack remains `requests` + BeautifulSoup. Scrapling is recorded as a future source-level evaluation option, not an approved full-engine migration.
 - Normalization rules are deterministic MVP heuristics.
 - Some older sprint docs may still contain mojibake text from earlier encoding issues.
 
@@ -493,6 +494,7 @@ limit 10;
 2. Continue light monitoring of daily 07:30 KST Cloudflare-triggered production runs.
 3. Monitor Ara Waterway live-source precision and add fixtures only if K-water markup changes again.
 4. Add only one new regional source after current parser/source precision stays stable.
-5. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-6. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
-7. Treat Hangang notice detail fetching as lower priority unless real source coverage gaps recur.
+5. Evaluate Scrapling only if a concrete source-level parser problem appears; start with one parser adapter and fixture/live-smoke comparison, not a full crawler rewrite.
+6. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+7. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+8. Treat Hangang notice detail fetching as lower priority unless real source coverage gaps recur.

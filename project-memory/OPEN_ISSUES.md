@@ -54,6 +54,9 @@ Last updated: 2026-07-20
 
 - HTML parsers are fixture-driven and may need updates when source pages change.
 - Crawler fixture tests are under `tests/unit/crawler/`.
+- Current crawler stack is intentionally `requests` + BeautifulSoup because the active sources are static enough for the MVP.
+- Future option: evaluate Scrapling only as a source-level parser adapter when a real source repeatedly breaks BeautifulSoup selectors, over-collects page chrome, or requires anti-bot/dynamic-rendering support.
+- Do not replace the whole crawler engine preemptively; keep the raw candidate output contract stable and compare Scrapling output against existing fixtures/live smoke before adoption.
 
 ### Normalization is deterministic MVP logic
 

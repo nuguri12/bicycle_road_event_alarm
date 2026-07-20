@@ -143,6 +143,8 @@ MVP daily triggering remains stable, and the 2026-07-20 natural production run c
 2. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.
+   - Keep the current `requests` + BeautifulSoup crawler stack unless a source repeatedly breaks on static HTML parsing.
+   - Revisit Scrapling as a source-level parser adapter only after a concrete parser fragility or anti-bot/dynamic-rendering problem is observed.
 3. Add only one new regional source after parser stability improves.
 4. Add Telegram personal chat delivery before web or SNS:
    - Start with `/start`, `/stop`, stored `chat_id`, and `enabled` status.
