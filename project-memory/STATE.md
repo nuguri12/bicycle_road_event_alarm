@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering remains stable, and the 2026-07-20 natural production run confirmed the 2026-07-19 active Ara Waterway closure fix in production. A 2026-07-21 duplicate-message follow-up found that old and new normalized rows for the same Ara Waterway raw event could both remain publishable after location precision improved; local code now updates by `raw_event_id` first and deletes stale same-raw normalized rows. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering remains stable. The 2026-07-22 user-received Telegram message contained one Ara Waterway notice `1217` entry after the same-raw normalized dedupe fix, and live source crawling found exactly one publish candidate matching that URL, date, location, closure reason, and high cyclist impact. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -41,6 +41,7 @@ MVP daily triggering remains stable, and the 2026-07-20 natural production run c
 - Natural Cloudflare-triggered run on 2026-07-15 completed and published a no-event Telegram message successfully on commit `cecc804`.
 - Natural Cloudflare-triggered run on 2026-07-16 completed and published a no-event Telegram message successfully on commit `e943e3e`.
 - Natural Cloudflare-triggered run on 2026-07-20 completed and published an Ara Waterway event alert successfully on commit `75f346e`.
+- User-received Telegram message on 2026-07-22 contained one Ara Waterway notice `1217` alert after commit `0d6f1fc`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -139,13 +140,19 @@ MVP daily triggering remains stable, and the 2026-07-20 natural production run c
   - Root cause: `normalized_events` dedupe used a key containing location/region, so the old `구간 확인 필요` row and the new detailed-location row could coexist for the same refreshed `raw_event_id`.
   - Local fix: `save_normalized_events` now updates same-raw normalized rows first, deletes stale same-raw duplicates, and updates the deterministic duplicate key during refresh.
   - Verification: `python -m pytest -q` reported `99 passed`; `python -m ruff check .` and `python -m black --check .` passed.
+- The 2026-07-22 user-received Telegram message verified the same-raw normalized dedupe fix at the user-facing level:
+  - Message contained one Ara Waterway notice `1217` entry, not the previous detailed-location plus stale `구간 확인 필요` duplicate pair.
+  - Live source cross-check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=1`.
+  - The single publish candidate was notice `1217` with `raw_location_text=시천교~계양대교 남, 북측 자전거도로; 굴포천 연결수로 좌안(서측) 자전거도로; 아라마루 전망대 및 아라폭포`, `region=경기`, `validation_status=valid`, `event_type=road_closure`, and `cyclist_impact_level=high`.
+  - Supabase verification found ingest run `3e51c8b8-ad0b-4682-86cf-c7780262c367`, message run `a947db97-20bf-40a2-ab66-74760c8fe2ed`, `published_message_count=1`, and latest `publish_attempts.status=success`.
+  - DB rows for source URL `1217` now show `ARA_1217_NORMALIZED_ROW_COUNT=1`, one raw id, one publishable normalized row, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
+  - GitHub CLI and public GitHub API could not verify private Actions logs without authentication, but Supabase runtime records verify the production batch outcome.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions
 
 1. Continue light monitoring of daily 07:30 KST production runs.
-   - After pushing the 2026-07-21 same-raw normalized dedupe fix, verify the next run publishes Ara Waterway notice `1217` at most once if it remains active.
 2. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.

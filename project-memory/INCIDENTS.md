@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 ## Role
 
@@ -30,7 +30,8 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Fix: Local `save_normalized_events` now looks for existing rows by `raw_event_id` first, updates the preferred same-raw row, deletes stale same-raw normalized duplicates, and updates the deterministic duplicate key during refresh.
 - Verification: Added a regression test for same-raw normalized stale-row cleanup. `python -m pytest -q` reported `99 passed`; `python -m ruff check .` and `python -m black --check .` passed.
 - Prevention: Do not rely only on location-bearing deterministic keys when refreshing normalized data from a stable raw source. Keep one normalized row per raw source observation unless the data model explicitly supports one-to-many normalization.
-- Follow-up: Push the fix and verify the next production run publishes notice `1217` at most once if it remains active. Optional DB cleanup may be needed if the next run does not process the same raw event before message generation.
+- Production verification: The 2026-07-22 user-received Telegram message contained one Ara Waterway notice `1217` entry rather than the previous detailed-location plus stale `구간 확인 필요` duplicate pair. Live source cross-check found no source failures, 18 candidates, exactly one publish candidate, and the candidate matched notice `1217` with detailed blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, and `cyclist_impact_level=high`. Supabase verification found ingest run `3e51c8b8-ad0b-4682-86cf-c7780262c367`, message run `a947db97-20bf-40a2-ab66-74760c8fe2ed`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
+- Follow-up: Resolved on 2026-07-22. GitHub Actions log verification still requires authenticated local GitHub access, but user-facing Telegram, live source, and Supabase runtime records all match.
 
 ## 2026-07-19: Active Ara Waterway closure omitted from Telegram message
 
