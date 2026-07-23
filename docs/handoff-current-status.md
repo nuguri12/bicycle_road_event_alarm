@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 ## Purpose
 
@@ -22,7 +22,7 @@ The service collects public traffic-control and event information that may affec
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
-As of 2026-07-22, the Cloudflare-triggered daily production path is operational. The 2026-07-22 user-received Telegram message contained one Ara Waterway notice `1217` entry after the same-raw normalized dedupe fix, and live source crawling found exactly one publish candidate matching the message URL, date, detailed location, closure reason, and high cyclist impact.
+As of 2026-07-23, the Cloudflare-triggered daily production path is operational. The 2026-07-23 user-received Telegram message contained one Ara Waterway notice `1217` entry, and live source crawling plus Supabase records again found exactly one publish candidate matching the message URL, date, detailed location, closure reason, and high cyclist impact.
 
 ## Current Operational Status
 
@@ -116,6 +116,11 @@ Latest natural production observation:
   - The publish candidate matched notice `1217`: `raw_date_text=2026-07-17`, detailed Ara blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, `cyclist_impact_level=high`.
   - Supabase verification found ingest run `3e51c8b8-ad0b-4682-86cf-c7780262c367`, message run `a947db97-20bf-40a2-ab66-74760c8fe2ed`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
   - GitHub Actions log verification still requires authenticated local GitHub access; `gh` was unauthenticated and the private API returned 404 without a token.
+- The 2026-07-23 user-received Telegram message again matched live source and Supabase state:
+  - User message contained one Ara Waterway notice `1217` entry with `2026-07-17`, 경기, detailed blocked sections, `교통통제(기상 여건 완화 시까지)`, and the same source URL.
+  - Live source check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=1`.
+  - The publish candidate matched notice `1217`: detailed Ara blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, `cyclist_impact_level=high`.
+  - Supabase verification found ingest run `2d9d5c6c-8e27-43b1-96cb-e98c8a693813`, message run `877a97f4-462c-4d14-81e8-8118269908a8`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -489,7 +494,7 @@ limit 10;
 - GitHub Actions native schedule was unreliable in this project.
 - Cloudflare Workers Cron now owns the production trigger and has produced verified successful natural daily runs after the 2026-07-06 prepared-statement incident.
 - The first natural production run after commit `a3685b3` was verified on 2026-07-20 with `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
-- The Ara Waterway location precision and same-raw normalized dedupe fixes were verified at the user-facing, live-source, and Supabase runtime-record level on 2026-07-22. Direct GitHub Actions log verification still requires authenticated local GitHub access.
+- The Ara Waterway location precision and same-raw normalized dedupe fixes were verified at the user-facing, live-source, and Supabase runtime-record level on 2026-07-22 and 2026-07-23. Direct GitHub Actions log verification still requires authenticated local GitHub access.
 - Ara Waterway parser precision has been improved for the current K-water board DOM, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by a separate section line, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
 - Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.

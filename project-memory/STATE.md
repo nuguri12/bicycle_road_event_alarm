@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering remains stable. The 2026-07-22 user-received Telegram message contained one Ara Waterway notice `1217` entry after the same-raw normalized dedupe fix, and live source crawling found exactly one publish candidate matching that URL, date, location, closure reason, and high cyclist impact. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering remains stable. The 2026-07-23 user-received Telegram message contained one Ara Waterway notice `1217` entry, and live source crawling plus Supabase records again confirmed a single publishable source item matching that URL, date, location, closure reason, and high cyclist impact. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -42,6 +42,7 @@ MVP daily triggering remains stable. The 2026-07-22 user-received Telegram messa
 - Natural Cloudflare-triggered run on 2026-07-16 completed and published a no-event Telegram message successfully on commit `e943e3e`.
 - Natural Cloudflare-triggered run on 2026-07-20 completed and published an Ara Waterway event alert successfully on commit `75f346e`.
 - User-received Telegram message on 2026-07-22 contained one Ara Waterway notice `1217` alert after commit `0d6f1fc`.
+- User-received Telegram message on 2026-07-23 contained one Ara Waterway notice `1217` alert after commit `5c0abff`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -147,6 +148,11 @@ MVP daily triggering remains stable. The 2026-07-22 user-received Telegram messa
   - Supabase verification found ingest run `3e51c8b8-ad0b-4682-86cf-c7780262c367`, message run `a947db97-20bf-40a2-ab66-74760c8fe2ed`, `published_message_count=1`, and latest `publish_attempts.status=success`.
   - DB rows for source URL `1217` now show `ARA_1217_NORMALIZED_ROW_COUNT=1`, one raw id, one publishable normalized row, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
   - GitHub CLI and public GitHub API could not verify private Actions logs without authentication, but Supabase runtime records verify the production batch outcome.
+- The 2026-07-23 user-received Telegram message again matched live source and DB state:
+  - User message: `[통행차단/영향 큼] 2026-07-17 경기, 시천교~계양대교 남·북측 자전거도로/굴포천 연결수로 좌안(서측)/아라마루 전망대·아라폭포`, reason `교통통제(기상 여건 완화 시까지)`, source URL `1217`.
+  - Live source cross-check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=1`.
+  - The single publish candidate was notice `1217` with the same date, detailed blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, and `cyclist_impact_level=high`.
+  - Supabase verification found ingest run `2d9d5c6c-8e27-43b1-96cb-e98c8a693813`, message run `877a97f4-462c-4d14-81e8-8118269908a8`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
