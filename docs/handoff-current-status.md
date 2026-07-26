@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-23
+Last updated: 2026-07-26
 
 ## Purpose
 
@@ -22,7 +22,7 @@ The service collects public traffic-control and event information that may affec
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
-As of 2026-07-23, the Cloudflare-triggered daily production path is operational. The 2026-07-23 user-received Telegram message contained one Ara Waterway notice `1217` entry, and live source crawling plus Supabase records again found exactly one publish candidate matching the message URL, date, detailed location, closure reason, and high cyclist impact.
+As of 2026-07-26, the Cloudflare-triggered daily production path is operational. The 2026-07-26 user-received Telegram no-event message was cross-checked against live source crawling at 07:32 KST and matched `PUBLISH_COUNT=0`.
 
 ## Current Operational Status
 
@@ -121,6 +121,11 @@ Latest natural production observation:
   - Live source check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=1`.
   - The publish candidate matched notice `1217`: detailed Ara blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, `cyclist_impact_level=high`.
   - Supabase verification found ingest run `2d9d5c6c-8e27-43b1-96cb-e98c8a693813`, message run `877a97f4-462c-4d14-81e8-8118269908a8`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
+- The 2026-07-26 user-received Telegram no-event message matched live source state:
+  - Message text: `2026-07-26 07:32 기준 오늘 자전거 주의 이벤트가 없습니다.`
+  - Live source check for 2026-07-26 07:32 KST found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=0`.
+  - Source counts were Hangang events 2, Hangang notices 3, and Ara Waterway notices 13.
+  - Ara Waterway notices `1217` and `1224` were present but completed and normalized to `publish_candidate=False`, so the no-event message was source-consistent.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -366,6 +371,17 @@ python -m bicycle_road_event_alarm.cli.seed_publishable_fixture
 ```
 
 ## Latest Verification Baseline
+
+Latest live-source no-event smoke for the 2026-07-26 Telegram message:
+
+```text
+CHECK_KST=2026-07-26 07:32
+SOURCE_FAILURES={}
+SOURCE_CANDIDATE_COUNT=18
+SOURCE_COUNTS={Hangang events: 2, Hangang notices: 3, Ara Waterway notices: 13}
+PUBLISH_COUNT=0
+Ara Waterway notices 1217 and 1224 were present but completed and publish_candidate=False.
+```
 
 Latest full local verification after the 2026-07-20 Ara Waterway location precision fix:
 

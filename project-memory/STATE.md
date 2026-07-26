@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-23
+Last updated: 2026-07-26
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 ## Active Task
 
-MVP daily triggering remains stable. The 2026-07-23 user-received Telegram message contained one Ara Waterway notice `1217` entry, and live source crawling plus Supabase records again confirmed a single publishable source item matching that URL, date, location, closure reason, and high cyclist impact. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+MVP daily triggering remains stable. The 2026-07-26 user-received Telegram no-event message was cross-checked against live source crawling at 07:32 KST and matched `PUBLISH_COUNT=0`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
 ## Current Runtime State
 
@@ -43,6 +43,7 @@ MVP daily triggering remains stable. The 2026-07-23 user-received Telegram messa
 - Natural Cloudflare-triggered run on 2026-07-20 completed and published an Ara Waterway event alert successfully on commit `75f346e`.
 - User-received Telegram message on 2026-07-22 contained one Ara Waterway notice `1217` alert after commit `0d6f1fc`.
 - User-received Telegram message on 2026-07-23 contained one Ara Waterway notice `1217` alert after commit `5c0abff`.
+- User-received Telegram message on 2026-07-26 said there were no cycling caution events; live source crawling at 07:32 KST found no publishable candidates.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -153,6 +154,11 @@ MVP daily triggering remains stable. The 2026-07-23 user-received Telegram messa
   - Live source cross-check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=1`.
   - The single publish candidate was notice `1217` with the same date, detailed blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, and `cyclist_impact_level=high`.
   - Supabase verification found ingest run `2d9d5c6c-8e27-43b1-96cb-e98c8a693813`, message run `877a97f4-462c-4d14-81e8-8118269908a8`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
+- The 2026-07-26 user-received Telegram no-event message matched live source state:
+  - Message text: `2026-07-26 07:32 기준 오늘 자전거 주의 이벤트가 없습니다.`
+  - Live source cross-check for 2026-07-26 07:32 KST found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=0`.
+  - Source counts were Hangang events 2, Hangang notices 3, and Ara Waterway notices 13.
+  - Ara Waterway notices `1217` and `1224` were both present but completed and normalized to `publish_candidate=False`, so excluding them from the Telegram message was correct.
 - Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
