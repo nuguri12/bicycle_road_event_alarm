@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-26
+Last updated: 2026-07-28
 
 ## Purpose
 
@@ -22,7 +22,7 @@ The service collects public traffic-control and event information that may affec
 
 The runtime MVP sources are Hangang park events, Hangang park notices via Seoulboard JSON API (`bbsNo=5211`), and Ara Waterway notices via the official K-water 경인아라뱃길 notice URL. SPATIC code remains in the repository for regression/reference purposes, but the runtime ingest path no longer calls SPATIC.
 
-As of 2026-07-26, the Cloudflare-triggered daily production path is operational. The 2026-07-26 user-received Telegram no-event message was cross-checked against live source crawling at 07:32 KST and matched `PUBLISH_COUNT=0`.
+As of 2026-07-28, the Cloudflare-triggered daily production path is operational. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records; current source state matched `PUBLISH_COUNT=0`, and the latest Ara Waterway notice `1217` row was marked `[개방완료]` with `publish_candidate=False`.
 
 ## Current Operational Status
 
@@ -121,11 +121,22 @@ Latest natural production observation:
   - Live source check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=1`.
   - The publish candidate matched notice `1217`: detailed Ara blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, `cyclist_impact_level=high`.
   - Supabase verification found ingest run `2d9d5c6c-8e27-43b1-96cb-e98c8a693813`, message run `877a97f4-462c-4d14-81e8-8118269908a8`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
+- The 2026-07-24 user-received Telegram message again matched live source and Supabase state:
+  - User message contained one Ara Waterway notice `1217` entry with `2026-07-17`, 경기, detailed blocked sections, `통행 차단(기상 여건 완화 시까지)`, and the same source URL.
+  - Live source check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=19`, and `PUBLISH_COUNT=1`.
+  - The publish candidate matched notice `1217`: detailed Ara blocked sections, `region=경기`, `validation_status=valid`, `event_type=road_closure`, `cyclist_impact_level=high`.
+  - Supabase verification found ingest run `cf247199-7405-4338-858b-74dd7cfd0ab4`, message run `01b777e1-bcc5-439f-af38-6eb0a3fad14d`, `published_message_count=1`, latest `publish_attempts.status=success`, `ARA_1217_NORMALIZED_ROW_COUNT=1`, and `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
 - The 2026-07-26 user-received Telegram no-event message matched live source state:
   - Message text: `2026-07-26 07:32 기준 오늘 자전거 주의 이벤트가 없습니다.`
   - Live source check for 2026-07-26 07:32 KST found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=0`.
   - Source counts were Hangang events 2, Hangang notices 3, and Ara Waterway notices 13.
   - Ara Waterway notices `1217` and `1224` were present but completed and normalized to `publish_candidate=False`, so the no-event message was source-consistent.
+- The 2026-07-28 user-received Telegram no-event message matched live source and Supabase state:
+  - Message text: `2026-07-28 07:32 기준 오늘 자전거 주의 이벤트가 없습니다.`
+  - Live source check found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=20`, and `PUBLISH_COUNT=0`.
+  - Ara Waterway notice `1217` was still present in the source, but the title included `[개방완료]`; it normalized to `publish_candidate=False`, so excluding it from the Telegram message was correct.
+  - Supabase verification found ingest run `ac0d604e-8ce5-401f-aa9b-d1c80f563eb6`, message run `9c0966bf-5ed0-475d-bdc3-23ae7aa0dba7`, `message_context=no_event`, `published_message_count=1`, and latest `publish_attempts.status=success`.
+  - DB rows for source URL `1217` show two historical normalized rows because the completed title changed the raw content hash; the latest `[개방완료]` row is linked to the current ingest run and has `publish_candidate=False`, while the older active row is not in the current run scope. `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
 - Local Ara Waterway parser smoke after precision updates found 13 K-water notice candidates, included the 2026-06-19 latest board post, excluded footer links, generated detail URLs, and enriched locations from detail-page control sections.
 
 ### Schedule Failure Diagnosis
@@ -510,7 +521,7 @@ limit 10;
 - GitHub Actions native schedule was unreliable in this project.
 - Cloudflare Workers Cron now owns the production trigger and has produced verified successful natural daily runs after the 2026-07-06 prepared-statement incident.
 - The first natural production run after commit `a3685b3` was verified on 2026-07-20 with `MESSAGE_EVENT_COUNT=1`, `MESSAGE_CONTEXT=event_alert`, and `TELEGRAM_STATUS=success`.
-- The Ara Waterway location precision and same-raw normalized dedupe fixes were verified at the user-facing, live-source, and Supabase runtime-record level on 2026-07-22 and 2026-07-23. Direct GitHub Actions log verification still requires authenticated local GitHub access.
+- The Ara Waterway location precision and same-raw normalized dedupe fixes were verified at the user-facing, live-source, and Supabase runtime-record level on 2026-07-22, 2026-07-23, and 2026-07-24. Direct GitHub Actions log verification still requires authenticated local GitHub access.
 - Ara Waterway parser precision has been improved for the current K-water board DOM, including title links without nested `strong` tags and detail pages where `통제 구간` is followed by a separate section line, but it still depends on `.ntt_sj`, `.ntt_cn`, and `bbsMstrView('<id>')` remaining stable.
 - Ara Waterway detail enrichment adds one detail HTTP request per parsed candidate; failures are tolerated but would reduce location precision.
 - Source outage and true no-event are separated in DB/CLI context, while partial outages intentionally remain quiet in user-facing messages.
