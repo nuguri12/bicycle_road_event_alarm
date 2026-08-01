@@ -1,8 +1,23 @@
 # Open Issues
 
-Last updated: 2026-07-22
+Last updated: 2026-08-01
 
 ## Operational Risks
+
+### 2026-08-01 missing daily Telegram message
+
+- Symptom: The user received daily no-event Telegram messages on 2026-07-27 through 2026-07-31, but no message was received for the 2026-08-01 07:30 KST production run.
+- Verified evidence:
+  - Supabase `run_logs` and `publish_attempts` have no rows after the 2026-07-31 07:32 KST successful publish.
+  - Latest DB records show normal success on 2026-07-27, 2026-07-28, 2026-07-29, 2026-07-30, and 2026-07-31.
+  - Live source smoke for `CHECK_KST=2026-08-01 07:32` returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=23`, and `PUBLISH_COUNT=5`.
+  - The 5 publish candidates were Hangang event items active on 2026-08-01, so a successful batch should have produced an event alert, not a no-event message.
+  - Local `main` and `origin/main` are both `190974df02e50e1d71b3658611a4f614fba4570c`.
+  - `cloudflare/scheduler` unit tests passed and the deployed Worker URL returned `200`.
+  - Wrangler confirmed active Worker deployment `33484d82-8f35-4a48-b9aa-842bf7d67dc8` and secrets `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
+- Current assessment: The application batch did not reach the Supabase-backed ingest stage on 2026-08-01. The remaining likely failure point is Cloudflare Cron firing or the Worker-to-GitHub `workflow_dispatch` request.
+- Mitigation applied: Re-deployed the Cloudflare Worker on 2026-08-01 with scheduled-dispatch start/success/failure logs and re-applied the cron trigger. Wrangler reported `schedule: 30 22 * * *` and active Worker version `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
+- Next step: Check the next natural 07:30 KST run. If no Telegram message arrives, inspect Cloudflare Workers observability for `Cloudflare scheduled dispatch started` / `finished` / `failed` and GitHub Actions UI for the matching `workflow_dispatch` run. Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
 
 ### Ara Waterway parser precision
 

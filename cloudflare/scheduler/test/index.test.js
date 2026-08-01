@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  default as worker,
   buildWorkflowDispatchRequest,
   handleRequest,
   triggerWorkflowDispatch,
@@ -85,4 +86,31 @@ test("handleRequest rejects smoke trigger without token", async () => {
 
   assert.equal(response.status, 404);
   assert.equal(await response.text(), "not found");
+});
+
+test("scheduled dispatches the workflow through waitUntil", async () => {
+  const fetchCalls = [];
+  const okFetch = async (url, init) => {
+    fetchCalls.push({ url, init });
+    return {
+      ok: true,
+      text: async () => "",
+    };
+  };
+  const waitUntilCalls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = okFetch;
+  try {
+    await worker.scheduled({}, env, {
+      waitUntil(promise) {
+        waitUntilCalls.push(promise);
+      },
+    });
+    assert.equal(waitUntilCalls.length, 1);
+    await waitUntilCalls[0];
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(fetchCalls.length, 1);
 });

@@ -51,6 +51,18 @@ export async function triggerWorkflowDispatch(env, fetcher = fetch) {
     const body = await response.text();
     throw new Error(`GitHub workflow dispatch failed: ${response.status} ${body}`);
   }
+  console.log("GitHub workflow dispatch accepted");
+}
+
+async function runScheduledDispatch(env) {
+  console.log("Cloudflare scheduled dispatch started");
+  try {
+    await triggerWorkflowDispatch(env);
+    console.log("Cloudflare scheduled dispatch finished");
+  } catch (error) {
+    console.error("Cloudflare scheduled dispatch failed", error);
+    throw error;
+  }
 }
 
 export async function handleRequest(request, env, fetcher = fetch) {
@@ -82,7 +94,7 @@ export async function handleRequest(request, env, fetcher = fetch) {
 
 export default {
   async scheduled(_event, env, ctx) {
-    ctx.waitUntil(triggerWorkflowDispatch(env));
+    ctx.waitUntil(runScheduledDispatch(env));
   },
 
   async fetch(request, env) {

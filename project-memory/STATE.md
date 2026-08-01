@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-07-28
+Last updated: 2026-08-01
 
 ## Current Objective
 
@@ -9,6 +9,8 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 ## Active Task
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
+
+Current investigation: The 2026-08-01 daily Telegram message was missing. The user received successful daily messages on 2026-07-27 through 2026-07-31. Supabase has no `run_logs` or `publish_attempts` after the 2026-07-31 07:32 KST success, while a live source smoke for 2026-08-01 07:32 KST found 5 publish candidates. The app batch likely did not reach the ingest stage; check Cloudflare Cron firing and GitHub `workflow_dispatch` creation before changing source/parser logic.
 
 ## Current Runtime State
 
@@ -21,7 +23,7 @@ MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-ev
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
 - Cloudflare Worker URL: `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`
-- Latest Cloudflare deployment version: `33484d82-8f35-4a48-b9aa-842bf7d67dc8`
+- Latest Cloudflare deployment version: `6b69f230-842b-4fa7-80cc-ca3c6119f158`
 - Production schedule: Cloudflare Cron `30 22 * * *`
 - Meaning: every day 07:30 KST
 - Cloudflare cron trigger deployment is confirmed by Wrangler.
@@ -46,6 +48,9 @@ MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-ev
 - User-received Telegram message on 2026-07-24 contained one Ara Waterway notice `1217` alert after commit `fc31ed2`.
 - User-received Telegram message on 2026-07-26 said there were no cycling caution events; live source crawling at 07:32 KST found no publishable candidates.
 - User-received Telegram message on 2026-07-28 said there were no cycling caution events; live source crawling found no publishable candidates.
+- User-received Telegram no-event messages on 2026-07-27 through 2026-07-31 are backed by Supabase `publish_attempts.status=success`.
+- The 2026-08-01 07:30 KST Telegram message was missing. Supabase has no runtime rows after the 2026-07-31 07:32 KST publish. Live source smoke for 2026-08-01 07:32 KST found 23 source candidates, no source failures, and 5 publish candidates, all from Hangang events.
+- 2026-08-01 mitigation: Cloudflare Worker was re-deployed with scheduled-dispatch logs and Wrangler re-applied `schedule: 30 22 * * *`; active version is `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
