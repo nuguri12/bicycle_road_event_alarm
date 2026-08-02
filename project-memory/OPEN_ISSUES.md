@@ -17,6 +17,7 @@ Last updated: 2026-08-01
   - Wrangler confirmed active Worker deployment `33484d82-8f35-4a48-b9aa-842bf7d67dc8` and secrets `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
 - Current assessment: The application batch did not reach the Supabase-backed ingest stage on 2026-08-01. The remaining likely failure point is Cloudflare Cron firing or the Worker-to-GitHub `workflow_dispatch` request.
 - Mitigation applied: Re-deployed the Cloudflare Worker on 2026-08-01 with scheduled-dispatch start/success/failure logs and re-applied the cron trigger. Wrangler reported `schedule: 30 22 * * *` and active Worker version `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
+- Follow-up: The next natural run on 2026-08-02 succeeded. Supabase recorded `message_context=event_alert`, `publish_attempts.status=success`, and live source smoke for 2026-08-02 07:32 KST returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=22`, and `PUBLISH_COUNT=4`. The four publish candidates matched the user-received Telegram message URLs.
 - Next step: Check the next natural 07:30 KST run. If no Telegram message arrives, inspect Cloudflare Workers observability for `Cloudflare scheduled dispatch started` / `finished` / `failed` and GitHub Actions UI for the matching `workflow_dispatch` run. Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
 
 ### Ara Waterway parser precision

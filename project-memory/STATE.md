@@ -51,6 +51,7 @@ Current investigation: The 2026-08-01 daily Telegram message was missing. The us
 - User-received Telegram no-event messages on 2026-07-27 through 2026-07-31 are backed by Supabase `publish_attempts.status=success`.
 - The 2026-08-01 07:30 KST Telegram message was missing. Supabase has no runtime rows after the 2026-07-31 07:32 KST publish. Live source smoke for 2026-08-01 07:32 KST found 23 source candidates, no source failures, and 5 publish candidates, all from Hangang events.
 - 2026-08-01 mitigation: Cloudflare Worker was re-deployed with scheduled-dispatch logs and Wrangler re-applied `schedule: 30 22 * * *`; active version is `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
+- The 2026-08-02 07:30 KST natural run succeeded and published an event alert. Supabase recorded ingest run `320899c5-b7dd-47ee-9194-c9a1171b0612`, message run `73d53a1f-1e5c-4ae2-84e1-bdb53989465b`, `message_context=event_alert`, and `publish_attempts.status=success`. Live source smoke found 22 candidates, no source failures, and 4 publish candidates matching the Telegram message URLs.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
