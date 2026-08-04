@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-07-22
+Last updated: 2026-08-04
 
 ## Role
 
@@ -21,6 +21,17 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-08-04: Cloudflare scheduled dispatch threw before GitHub Actions
+
+- Symptom: The expected 2026-08-04 07:30 KST Telegram message did not arrive.
+- Impact: No GitHub Actions batch reached Supabase ingest and no Telegram publish attempt was recorded.
+- Root cause: Unresolved. Cloudflare GraphQL confirms the Cron Trigger fired, but the Worker scheduled invocation ended with `status=scriptThrewException`. Worker script settings currently have `observability=null`, so the persisted exception body is unavailable.
+- Evidence: Supabase had no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Worker public URL returned `200`. Cloudflare schedules API returned `30 22 * * *`. Cloudflare secrets list showed `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`. Cloudflare GraphQL showed `datetime=2026-08-03T22:30:33Z`, `cron=30 22 * * *`, `status=scriptThrewException`; previous scheduled invocations from 2026-07-29 through 2026-08-03 were `success`.
+- Fix: Pending. Proposed first fix is to enable Worker observability/log persistence and re-register the Cloudflare Worker `GITHUB_TOKEN` with a valid GitHub PAT, then run an authenticated smoke dispatch with operator approval.
+- Verification: Pending.
+- Prevention: Keep Workers Logs enabled for scheduler Workers. On missing Telegram messages, check Supabase rows first, then Cloudflare scheduled invocation status, then GitHub workflow dispatch evidence before changing parser or Telegram code.
+- Follow-up: Track active remediation in `OPEN_ISSUES.md`.
 
 ## 2026-07-21: Duplicate Ara Waterway source in one Telegram message
 

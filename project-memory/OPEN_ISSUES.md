@@ -1,24 +1,34 @@
 # Open Issues
 
-Last updated: 2026-08-01
+Last updated: 2026-08-04
 
 ## Operational Risks
 
+### 2026-08-04 missing daily Telegram message
+
+- Symptom: No Telegram message was received for the 2026-08-04 07:30 KST production run.
+- Verified evidence:
+  - Supabase `run_logs` and `publish_attempts` have no rows after the 2026-08-03 07:31 KST successful publish.
+  - Worker public URL returned `200`.
+  - Cloudflare API token verified successfully.
+  - Wrangler `deployments list` succeeded and latest deployment is still `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
+  - Wrangler `secret list` shows `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
+  - Cloudflare schedules API shows `30 22 * * *`.
+  - Cloudflare GraphQL `workersInvocationsScheduled` shows the 2026-08-04 07:30 KST cron fired with `status=scriptThrewException`.
+  - Previous scheduled invocations on 2026-07-29 through 2026-08-03 were `success`.
+  - Worker script settings returned `observability=null`, so the exact historical exception message is not available through persisted Workers Logs.
+- Current assessment: The scheduler fired, but the Worker scheduled dispatch threw before the application batch reached Supabase ingest. The most likely failure point is `triggerWorkflowDispatch`, especially the GitHub API call or the Cloudflare-stored `GITHUB_TOKEN`.
+- Proposed fix:
+  - Enable Worker observability/log persistence so future exceptions are inspectable.
+  - Re-register Cloudflare Worker secret `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`.
+  - Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
+  - Confirm GitHub Actions run creation and Supabase/Telgram records after smoke.
+
 ### 2026-08-01 missing daily Telegram message
 
-- Symptom: The user received daily no-event Telegram messages on 2026-07-27 through 2026-07-31, but no message was received for the 2026-08-01 07:30 KST production run.
-- Verified evidence:
-  - Supabase `run_logs` and `publish_attempts` have no rows after the 2026-07-31 07:32 KST successful publish.
-  - Latest DB records show normal success on 2026-07-27, 2026-07-28, 2026-07-29, 2026-07-30, and 2026-07-31.
-  - Live source smoke for `CHECK_KST=2026-08-01 07:32` returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=23`, and `PUBLISH_COUNT=5`.
-  - The 5 publish candidates were Hangang event items active on 2026-08-01, so a successful batch should have produced an event alert, not a no-event message.
-  - Local `main` and `origin/main` are both `190974df02e50e1d71b3658611a4f614fba4570c`.
-  - `cloudflare/scheduler` unit tests passed and the deployed Worker URL returned `200`.
-  - Wrangler confirmed active Worker deployment `33484d82-8f35-4a48-b9aa-842bf7d67dc8` and secrets `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
-- Current assessment: The application batch did not reach the Supabase-backed ingest stage on 2026-08-01. The remaining likely failure point is Cloudflare Cron firing or the Worker-to-GitHub `workflow_dispatch` request.
-- Mitigation applied: Re-deployed the Cloudflare Worker on 2026-08-01 with scheduled-dispatch start/success/failure logs and re-applied the cron trigger. Wrangler reported `schedule: 30 22 * * *` and active Worker version `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
-- Follow-up: The next natural run on 2026-08-02 succeeded. Supabase recorded `message_context=event_alert`, `publish_attempts.status=success`, and live source smoke for 2026-08-02 07:32 KST returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=22`, and `PUBLISH_COUNT=4`. The four publish candidates matched the user-received Telegram message URLs.
-- Next step: Check the next natural 07:30 KST run. If no Telegram message arrives, inspect Cloudflare Workers observability for `Cloudflare scheduled dispatch started` / `finished` / `failed` and GitHub Actions UI for the matching `workflow_dispatch` run. Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
+- Status: Follow-up succeeded.
+- Summary: The 2026-08-01 daily message was missing and Supabase had no runtime rows after the 2026-07-31 success. The Worker was redeployed with scheduled-dispatch logs and cron was re-applied. The next natural run on 2026-08-02 succeeded with `message_context=event_alert`, `publish_attempts.status=success`, and live source smoke matched the user-received Telegram message URLs.
+- Follow-up: Keep this as background context; the active scheduler issue is now the 2026-08-04 `scriptThrewException`.
 
 ### Ara Waterway parser precision
 

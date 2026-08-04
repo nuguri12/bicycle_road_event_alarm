@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-01
+Last updated: 2026-08-04
 
 ## Current Objective
 
@@ -10,7 +10,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
-Current investigation: The 2026-08-01 daily Telegram message was missing. The user received successful daily messages on 2026-07-27 through 2026-07-31. Supabase has no `run_logs` or `publish_attempts` after the 2026-07-31 07:32 KST success, while a live source smoke for 2026-08-01 07:32 KST found 5 publish candidates. The app batch likely did not reach the ingest stage; check Cloudflare Cron firing and GitHub `workflow_dispatch` creation before changing source/parser logic.
+Current investigation: The 2026-08-04 daily Telegram message was missing. Supabase has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Cloudflare GraphQL scheduled invocations show the 2026-08-04 07:30 KST cron did fire but ended with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reached Supabase ingest.
 
 ## Current Runtime State
 
@@ -52,6 +52,15 @@ Current investigation: The 2026-08-01 daily Telegram message was missing. The us
 - The 2026-08-01 07:30 KST Telegram message was missing. Supabase has no runtime rows after the 2026-07-31 07:32 KST publish. Live source smoke for 2026-08-01 07:32 KST found 23 source candidates, no source failures, and 5 publish candidates, all from Hangang events.
 - 2026-08-01 mitigation: Cloudflare Worker was re-deployed with scheduled-dispatch logs and Wrangler re-applied `schedule: 30 22 * * *`; active version is `6b69f230-842b-4fa7-80cc-ca3c6119f158`.
 - The 2026-08-02 07:30 KST natural run succeeded and published an event alert. Supabase recorded ingest run `320899c5-b7dd-47ee-9194-c9a1171b0612`, message run `73d53a1f-1e5c-4ae2-84e1-bdb53989465b`, `message_context=event_alert`, and `publish_attempts.status=success`. Live source smoke found 22 candidates, no source failures, and 4 publish candidates matching the Telegram message URLs.
+- The 2026-08-03 07:31 KST natural run succeeded. Latest Supabase rows before the 2026-08-04 incident are ingest run `67327e8f-86ff-43fb-8dbe-906a505db186` and message run `c2d360b5-9a6c-4822-9ec2-c359f7cc3aeb` with `message_context=event_alert`.
+- The 2026-08-04 07:30 KST Telegram message was missing:
+  - Supabase had no `run_logs` or `publish_attempts` after 2026-08-03 07:31 KST.
+  - Worker public URL returned `200`, so the deployment was reachable.
+  - Cloudflare API token was verified successfully.
+  - Cloudflare secrets `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN` exist.
+  - Cloudflare schedules API returned `30 22 * * *`.
+  - Cloudflare GraphQL `workersInvocationsScheduled` showed one 2026-08-04 invocation: `status=scriptThrewException`, `cron=30 22 * * *`, `datetime=2026-08-03T22:30:33Z`.
+  - Worker script settings returned `observability=null`, so past console error details were not available through Workers Logs.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -184,16 +193,21 @@ Current investigation: The 2026-08-01 daily Telegram message was missing. The us
 ## Next Actions
 
 1. Continue light monitoring of daily 07:30 KST production runs.
-2. Stabilize parsing before adding product features:
+2. Resolve the 2026-08-04 Cloudflare Worker scheduled-dispatch failure before changing crawler/parser logic:
+   - Enable Worker observability/log persistence.
+   - Re-register Cloudflare Worker secret `GITHUB_TOKEN` with a valid GitHub PAT.
+   - Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
+   - Confirm GitHub `workflow_dispatch`, Supabase ingest, message generation, and Telegram publish all complete.
+3. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.
    - Keep the current `requests` + BeautifulSoup crawler stack unless a source repeatedly breaks on static HTML parsing.
    - Revisit Scrapling as a source-level parser adapter only after a concrete parser fragility or anti-bot/dynamic-rendering problem is observed.
-3. Add only one new regional source after parser stability improves.
-4. Add Telegram personal chat delivery before web or SNS:
+4. Add only one new regional source after parser stability improves.
+5. Add Telegram personal chat delivery before web or SNS:
    - Start with `/start`, `/stop`, stored `chat_id`, and `enabled` status.
    - Defer complex preferences; first personalization should be a simple region choice.
-5. Build a minimal web/admin surface only after Telegram personal delivery works.
-6. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
-7. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-8. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+6. Build a minimal web/admin surface only after Telegram personal delivery works.
+7. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
+8. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+9. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
