@@ -8,6 +8,8 @@ Last updated: 2026-08-04
 
 - Symptom: No Telegram message was received for the 2026-08-04 07:30 KST production run.
 - Verified evidence:
+  - Live source smoke for `CHECK_KST=2026-08-04 07:32` returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=20`, and `PUBLISH_COUNT=2`.
+  - The 2 publish candidates were Hangang event items: `evntSn=441` (`한강 밤핑`) and `evntSn=440` (`2026 한강페스티벌 여름 축제`).
   - Supabase `run_logs` and `publish_attempts` have no rows after the 2026-08-03 07:31 KST successful publish.
   - Worker public URL returned `200`.
   - Cloudflare API token verified successfully.

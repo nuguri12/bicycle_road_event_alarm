@@ -10,7 +10,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
-Current investigation: The 2026-08-04 daily Telegram message was missing. Supabase has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Cloudflare GraphQL scheduled invocations show the 2026-08-04 07:30 KST cron did fire but ended with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reached Supabase ingest.
+Current investigation: The 2026-08-04 daily Telegram message was missing. Live source smoke for `CHECK_KST=2026-08-04 07:32` found no source failures, 20 source candidates, and 2 publish candidates from Hangang events. Supabase has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Cloudflare GraphQL scheduled invocations show the 2026-08-04 07:30 KST cron did fire but ended with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reached Supabase ingest.
 
 ## Current Runtime State
 
@@ -54,6 +54,7 @@ Current investigation: The 2026-08-04 daily Telegram message was missing. Supaba
 - The 2026-08-02 07:30 KST natural run succeeded and published an event alert. Supabase recorded ingest run `320899c5-b7dd-47ee-9194-c9a1171b0612`, message run `73d53a1f-1e5c-4ae2-84e1-bdb53989465b`, `message_context=event_alert`, and `publish_attempts.status=success`. Live source smoke found 22 candidates, no source failures, and 4 publish candidates matching the Telegram message URLs.
 - The 2026-08-03 07:31 KST natural run succeeded. Latest Supabase rows before the 2026-08-04 incident are ingest run `67327e8f-86ff-43fb-8dbe-906a505db186` and message run `c2d360b5-9a6c-4822-9ec2-c359f7cc3aeb` with `message_context=event_alert`.
 - The 2026-08-04 07:30 KST Telegram message was missing:
+  - Live source smoke found 20 source candidates, no source failures, and 2 publish candidates: Hangang event `evntSn=441` (`한강 밤핑`) and `evntSn=440` (`2026 한강페스티벌 여름 축제`).
   - Supabase had no `run_logs` or `publish_attempts` after 2026-08-03 07:31 KST.
   - Worker public URL returned `200`, so the deployment was reachable.
   - Cloudflare API token was verified successfully.
