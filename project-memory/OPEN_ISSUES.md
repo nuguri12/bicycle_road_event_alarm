@@ -1,8 +1,46 @@
 # Open Issues
 
-Last updated: 2026-08-04
+Last updated: 2026-08-11
 
 ## Operational Risks
+
+### 2026-08-04 through 2026-08-11 missing daily Telegram messages
+
+- Symptom: No daily Telegram message was received from 2026-08-04 through 2026-08-11.
+- Verified evidence:
+  - Supabase `run_logs` and `publish_attempts` have no rows after the 2026-08-03 07:31 KST successful publish.
+  - Cloudflare schedules API still shows `30 22 * * *`.
+  - Cloudflare Worker `secret list` still shows `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
+  - Cloudflare GraphQL `workersInvocationsScheduled` shows the daily cron fired from 2026-08-04 through 2026-08-11 but ended with `status=scriptThrewException` each time.
+  - Live source smoke for `CHECK_KST=2026-08-11 07:32` returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=2`.
+  - The 2 publish candidates are Hangang event items: `evntSn=441` (`한강 밤핑`) and `evntSn=440` (`2026 한강페스티벌 여름 축제`).
+  - Worker settings currently show `observability.enabled=False` and `logpush=False`, so persisted exception details remain unavailable.
+- Current assessment: This is the same root-cause class as the 2026-08-04/2026-08-05 incidents. The scheduler fires, but the Worker scheduled dispatch throws before GitHub Actions and Supabase ingest. The likely failure point is still `triggerWorkflowDispatch`, especially the hidden Cloudflare-stored `GITHUB_TOKEN` value or GitHub API authorization.
+- Proposed fix:
+  - Apply/deploy the local `wrangler.toml` observability change so Worker logs persist.
+  - Re-register Cloudflare Worker `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`.
+  - Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
+  - Confirm GitHub Actions run creation, Supabase `run_logs`, and Telegram publish attempt.
+
+### 2026-08-05 missing daily Telegram message
+
+- Symptom: No Telegram message was received for the 2026-08-05 07:30 KST production run.
+- Verified evidence:
+  - Live source smoke for `CHECK_KST=2026-08-05 07:32` returned `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=20`, and `PUBLISH_COUNT=2`.
+  - The 2 publish candidates were Hangang event items: `evntSn=441` (`한강 밤핑`) and `evntSn=440` (`2026 한강페스티벌 여름 축제`).
+  - Supabase `run_logs` and `publish_attempts` still have no rows after the 2026-08-03 07:31 KST successful publish.
+  - Cloudflare API token verified successfully.
+  - Worker public URL returned `200`.
+  - Cloudflare Worker `secret list` shows `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
+  - Cloudflare schedules API shows `30 22 * * *`.
+  - Cloudflare GraphQL `workersInvocationsScheduled` shows the 2026-08-05 07:30 KST cron fired with `status=scriptThrewException`.
+  - Worker script settings still returned `observability=None` and `logpush=False`, so the exact historical exception body is not available through persisted Workers Logs.
+- Current assessment: This is the same failure pattern as 2026-08-04. The scheduler fired, but the Worker scheduled dispatch threw before the application batch reached Supabase ingest. The likely failure point remains `triggerWorkflowDispatch`, especially the GitHub API call or the Cloudflare-stored `GITHUB_TOKEN`.
+- Proposed fix: Enable Worker observability/log persistence, re-register Cloudflare Worker `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`, then run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
+- Remediation status:
+  - Local `cloudflare/scheduler/wrangler.toml` now includes `[observability] enabled = true` and `head_sampling_rate = 1`.
+  - Added a regression test to keep Worker log persistence configured.
+  - Direct Cloudflare settings update with the current `CLOUDFLARE_API_TOKEN` failed with `403 Authentication error`; a token with Worker edit permission or a local Wrangler deploy session is still required to apply the setting.
 
 ### 2026-08-04 missing daily Telegram message
 

@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-08-04
+Last updated: 2026-08-11
 
 ## Role
 
@@ -24,12 +24,12 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 
 ## 2026-08-04: Cloudflare scheduled dispatch threw before GitHub Actions
 
-- Symptom: The expected 2026-08-04 07:30 KST Telegram message did not arrive.
+- Symptom: The expected daily Telegram message did not arrive from 2026-08-04 through 2026-08-11.
 - Impact: No GitHub Actions batch reached Supabase ingest and no Telegram publish attempt was recorded.
-- Root cause: Unresolved. Cloudflare GraphQL confirms the Cron Trigger fired, but the Worker scheduled invocation ended with `status=scriptThrewException`. Worker script settings currently have `observability=null`, so the persisted exception body is unavailable.
-- Evidence: Supabase had no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Worker public URL returned `200`. Cloudflare schedules API returned `30 22 * * *`. Cloudflare secrets list showed `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`. Cloudflare GraphQL showed `datetime=2026-08-03T22:30:33Z`, `cron=30 22 * * *`, `status=scriptThrewException`; previous scheduled invocations from 2026-07-29 through 2026-08-03 were `success`.
-- Fix: Pending. Proposed first fix is to enable Worker observability/log persistence and re-register the Cloudflare Worker `GITHUB_TOKEN` with a valid GitHub PAT, then run an authenticated smoke dispatch with operator approval.
-- Verification: Pending.
+- Root cause: Unresolved. Cloudflare GraphQL confirms the Cron Trigger fired daily, but the Worker scheduled invocation ended with `status=scriptThrewException` before GitHub Actions and Supabase ingest. The likely failure point is still `triggerWorkflowDispatch`, especially the hidden Cloudflare-stored `GITHUB_TOKEN` value or GitHub API authorization.
+- Evidence: Supabase had no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Worker public URL returned `200`. Cloudflare schedules API returned `30 22 * * *`. Cloudflare secrets list showed `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`. Cloudflare GraphQL showed every scheduled invocation from 2026-08-04 through 2026-08-11 ended with `status=scriptThrewException`; previous scheduled invocations from 2026-08-02 and 2026-08-03 were `success`. Live source smoke on 2026-08-11 found no source failures and 2 publish candidates.
+- Fix: Pending. Local repo now includes `[observability] enabled = true` / `head_sampling_rate = 1` in `cloudflare/scheduler/wrangler.toml` and a regression test to keep log persistence configured. Applying that setting to Cloudflare still needs a Worker-edit capable Cloudflare token or Wrangler deployment. The Cloudflare Worker `GITHUB_TOKEN` should be re-registered with a valid GitHub PAT, then the authenticated smoke dispatch should be run with operator approval.
+- Verification: Local config tests pass. Production verification is pending until Worker observability is deployed, `GITHUB_TOKEN` is re-registered, and a smoke dispatch creates a GitHub Actions run plus Supabase/Telegram records.
 - Prevention: Keep Workers Logs enabled for scheduler Workers. On missing Telegram messages, check Supabase rows first, then Cloudflare scheduled invocation status, then GitHub workflow dispatch evidence before changing parser or Telegram code.
 - Follow-up: Track active remediation in `OPEN_ISSUES.md`.
 

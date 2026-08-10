@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-04
+Last updated: 2026-08-11
 
 ## Current Objective
 
@@ -10,7 +10,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
-Current investigation: The 2026-08-04 daily Telegram message was missing. Live source smoke for `CHECK_KST=2026-08-04 07:32` found no source failures, 20 source candidates, and 2 publish candidates from Hangang events. Supabase has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Cloudflare GraphQL scheduled invocations show the 2026-08-04 07:30 KST cron did fire but ended with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reached Supabase ingest.
+Current investigation: Daily Telegram messages have been missing from 2026-08-04 through 2026-08-11. Live source smoke on 2026-08-11 found no source failures and 2 publish candidates from Hangang events. Supabase has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Cloudflare GraphQL scheduled invocations show the 2026-08-04 through 2026-08-11 07:30 KST crons fired but ended with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reached Supabase ingest.
 
 ## Current Runtime State
 
@@ -62,6 +62,21 @@ Current investigation: The 2026-08-04 daily Telegram message was missing. Live s
   - Cloudflare schedules API returned `30 22 * * *`.
   - Cloudflare GraphQL `workersInvocationsScheduled` showed one 2026-08-04 invocation: `status=scriptThrewException`, `cron=30 22 * * *`, `datetime=2026-08-03T22:30:33Z`.
   - Worker script settings returned `observability=null`, so past console error details were not available through Workers Logs.
+- The 2026-08-05 07:30 KST Telegram message was also missing:
+  - Live source smoke found 20 source candidates, no source failures, and 2 publish candidates: Hangang event `evntSn=441` (`한강 밤핑`) and `evntSn=440` (`2026 한강페스티벌 여름 축제`).
+  - Supabase had no `run_logs` or `publish_attempts` after 2026-08-03 07:31 KST.
+  - Cloudflare API token verified successfully, Worker public URL returned `200`, schedules API returned `30 22 * * *`, and secrets list still showed `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`.
+  - Cloudflare GraphQL `workersInvocationsScheduled` showed one 2026-08-05 invocation: `status=scriptThrewException`, `cron=30 22 * * *`, `datetime=2026-08-04T22:30:31Z`.
+  - Worker script settings still returned `observability=None` and `logpush=False`, so the exact exception body is not available from persisted logs.
+- The 2026-08-06 through 2026-08-11 07:30 KST Telegram messages were also missing:
+  - Cloudflare GraphQL `workersInvocationsScheduled` returned `status=scriptThrewException` for every daily cron from `2026-08-05T22:30:30Z` through `2026-08-10T22:30:18Z`.
+  - Supabase had no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success.
+  - Live source smoke for `CHECK_KST=2026-08-11 07:32` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=18`, and `PUBLISH_COUNT=2`, again Hangang event `evntSn=441` (`한강 밤핑`) and `evntSn=440` (`2026 한강페스티벌 여름 축제`).
+  - Cloudflare settings still show cron `30 22 * * *`, secrets `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`, `observability.enabled=False`, and `logpush=False`.
+- Local remediation started on 2026-08-05:
+  - Added `[observability] enabled = true` and `head_sampling_rate = 1` to `cloudflare/scheduler/wrangler.toml`.
+  - Added a regression test requiring the Cloudflare scheduler config to persist Worker logs.
+  - Cloudflare API read checks succeeded, but direct settings update via `PATCH /workers/scripts/bicycle-road-event-alarm-scheduler/settings` returned `403 Authentication error`, so the current `CLOUDFLARE_API_TOKEN` cannot modify Worker settings.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
