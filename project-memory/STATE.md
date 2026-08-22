@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-11
+Last updated: 2026-08-22
 
 ## Current Objective
 
@@ -10,7 +10,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
-Current investigation: Daily Telegram messages have been missing from 2026-08-04 through 2026-08-11. Live source smoke on 2026-08-11 found no source failures and 2 publish candidates from Hangang events. Supabase has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Cloudflare GraphQL scheduled invocations show the 2026-08-04 through 2026-08-11 07:30 KST crons fired but ended with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reached Supabase ingest.
+Current investigation: Daily Telegram messages have been missing since 2026-08-04. Supabase still has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success as of 2026-08-22. Cloudflare GraphQL previously showed scheduled crons firing with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reaches Supabase ingest. On 2026-08-22, the local observability config was deployed to Cloudflare and the cron trigger was re-applied; the remaining operator action is to re-register the Worker `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`.
 
 ## Current Runtime State
 
@@ -23,7 +23,7 @@ Current investigation: Daily Telegram messages have been missing from 2026-08-04
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
 - Cloudflare Worker URL: `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`
-- Latest Cloudflare deployment version: `6b69f230-842b-4fa7-80cc-ca3c6119f158`
+- Latest Cloudflare deployment version: `ec6acfbe-217c-4767-91f8-9b2312cc4e86`
 - Production schedule: Cloudflare Cron `30 22 * * *`
 - Meaning: every day 07:30 KST
 - Cloudflare cron trigger deployment is confirmed by Wrangler.
@@ -77,6 +77,11 @@ Current investigation: Daily Telegram messages have been missing from 2026-08-04
   - Added `[observability] enabled = true` and `head_sampling_rate = 1` to `cloudflare/scheduler/wrangler.toml`.
   - Added a regression test requiring the Cloudflare scheduler config to persist Worker logs.
   - Cloudflare API read checks succeeded, but direct settings update via `PATCH /workers/scripts/bicycle-road-event-alarm-scheduler/settings` returned `403 Authentication error`, so the current `CLOUDFLARE_API_TOKEN` cannot modify Worker settings.
+- 2026-08-22 update:
+  - Supabase still has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success.
+  - `npx wrangler deploy` succeeded and deployed Worker version `ec6acfbe-217c-4767-91f8-9b2312cc4e86`.
+  - Wrangler reported `schedule: 30 22 * * *`; `npx wrangler deployments status` confirmed the new active version.
+  - `npx wrangler secret list` still shows `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`, but secret presence does not prove the hidden GitHub PAT value is valid.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`

@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-08-11
+Last updated: 2026-08-22
 
 ## Operational Risks
 
@@ -17,7 +17,7 @@ Last updated: 2026-08-11
   - Worker settings currently show `observability.enabled=False` and `logpush=False`, so persisted exception details remain unavailable.
 - Current assessment: This is the same root-cause class as the 2026-08-04/2026-08-05 incidents. The scheduler fires, but the Worker scheduled dispatch throws before GitHub Actions and Supabase ingest. The likely failure point is still `triggerWorkflowDispatch`, especially the hidden Cloudflare-stored `GITHUB_TOKEN` value or GitHub API authorization.
 - Proposed fix:
-  - Apply/deploy the local `wrangler.toml` observability change so Worker logs persist.
+  - Done on 2026-08-22: deployed the local `wrangler.toml` observability change so Worker logs persist, and re-applied cron `30 22 * * *` to Worker version `ec6acfbe-217c-4767-91f8-9b2312cc4e86`.
   - Re-register Cloudflare Worker `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`.
   - Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
   - Confirm GitHub Actions run creation, Supabase `run_logs`, and Telegram publish attempt.
