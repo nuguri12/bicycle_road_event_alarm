@@ -23,6 +23,14 @@ function requiredEnv(env, name) {
   return value.trim();
 }
 
+function normalizeGitHubToken(value) {
+  const tokenText = value
+    .replace(/^(bearer|token)\s+/i, "")
+    .replace(/\s+/g, "");
+  const tokenMatch = tokenText.match(/(?:github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+)/);
+  return tokenMatch === null ? tokenText : tokenMatch[0];
+}
+
 function buildWorkflowUrl(env) {
   const owner = requiredEnv(env, "GITHUB_OWNER");
   const repo = requiredEnv(env, "GITHUB_REPO");
@@ -33,9 +41,7 @@ function buildWorkflowUrl(env) {
 }
 
 function buildGitHubHeaders(env, authorizationScheme = "Bearer") {
-  const token = requiredEnv(env, "GITHUB_TOKEN")
-    .replace(/^(bearer|token)\s+/i, "")
-    .replace(/\s+/g, "");
+  const token = normalizeGitHubToken(requiredEnv(env, "GITHUB_TOKEN"));
 
   return {
     Authorization: `${authorizationScheme} ${token}`,

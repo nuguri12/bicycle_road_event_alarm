@@ -42,11 +42,11 @@ test("buildWorkflowDispatchRequest creates real publish dispatch request", () =>
 test("buildWorkflowDispatchRequest trims environment values", () => {
   const request = buildWorkflowDispatchRequest({
     ...env,
-    GITHUB_TOKEN: "Bearer github-\n token\n",
+    GITHUB_TOKEN: "GITHUB_TOKEN='github_pat_abc_DEF123'",
     GITHUB_REF: "main\n",
   });
 
-  assert.equal(request.init.headers.Authorization, "Bearer github-token");
+  assert.equal(request.init.headers.Authorization, "Bearer github_pat_abc_DEF123");
   assert.deepEqual(JSON.parse(request.init.body), {
     ref: "main",
     inputs: {
