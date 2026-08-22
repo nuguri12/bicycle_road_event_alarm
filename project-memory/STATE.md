@@ -23,7 +23,7 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
 - Cloudflare Worker URL: `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`
-- Latest Cloudflare deployment version: `f8323a1b-aa03-4519-9ee9-9b15bb0828b0`
+- Latest Cloudflare deployment version: `14ece178-19fd-447f-8a2b-4306ceb65d52`
 - Production schedule: Cloudflare Cron `30 22 * * *`
 - Meaning: every day 07:30 KST
 - Cloudflare cron trigger deployment is confirmed by Wrangler.
@@ -87,6 +87,7 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
   - Even after deploying Worker code version `db6bc0c3-d2d5-4900-9c03-d1adffbdffcc`, the authenticated GitHub workflow status diagnostic still returned HTTP 400. Current assessment: the hidden Cloudflare `GITHUB_TOKEN` value is not a valid raw GitHub PAT string for GitHub REST API requests.
   - The temporary smoke token used during testing was rotated to a new random value, producing active Worker version `f8323a1b-aa03-4519-9ee9-9b15bb0828b0`.
   - The user later reported the newly created GitHub PAT still showed `Never used`. A fresh Worker workflow-status diagnostic still returned GitHub HTTP 400, confirming the PAT shown by the user is not the value currently being used successfully by Cloudflare.
+  - After the user re-registered `GITHUB_TOKEN` again, the Worker secret-change version became `6dc39b02-8617-4c78-9c92-c33acc38b35e`; a fresh workflow-status diagnostic still returned GitHub HTTP 400. The smoke token was rotated again, producing active Worker version `14ece178-19fd-447f-8a2b-4306ceb65d52`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`

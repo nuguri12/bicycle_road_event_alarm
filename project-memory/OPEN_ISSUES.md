@@ -29,6 +29,7 @@ Last updated: 2026-08-22
   - The user reported the newly created GitHub PAT still showed `Never used` in GitHub.
   - A fresh smoke-protected Worker workflow-status diagnostic call reached the Worker but returned GitHub HTTP 400.
   - Assessment: The GitHub PAT shown by the user has not been used by Cloudflare; the current Cloudflare `GITHUB_TOKEN` value is still not a valid raw PAT value for GitHub REST API requests.
+  - After the user re-registered `GITHUB_TOKEN` again, the Worker secret-change version became `6dc39b02-8617-4c78-9c92-c33acc38b35e`; a fresh smoke-protected workflow-status diagnostic still returned GitHub HTTP 400. A follow-up smoke token rotation produced active Worker version `14ece178-19fd-447f-8a2b-4306ceb65d52`.
 
 ### 2026-08-05 missing daily Telegram message
 
