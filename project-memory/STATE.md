@@ -84,7 +84,7 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
   - `npx wrangler secret list` still shows `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`, but secret presence does not prove the hidden GitHub PAT value is valid.
   - After the user re-registered `GITHUB_TOKEN`, smoke auth was tested. A temporary smoke token reached the Worker, but GitHub workflow lookup and dispatch still returned HTTP 400 from GitHub.
   - Worker code was hardened to trim env values, strip common `Bearer`/`token` prefixes and whitespace from `GITHUB_TOKEN`, remove the explicit GitHub API version header, add a safe dry-run dispatch endpoint, and add a GitHub workflow status diagnostic endpoint.
-  - Even after deploying Worker version `aa77381d-a0e0-40a0-bcf4-fa0032300f80`, the authenticated GitHub workflow status diagnostic still returned HTTP 400. Current assessment: the hidden Cloudflare `GITHUB_TOKEN` value is not a valid raw GitHub PAT string for GitHub REST API requests.
+  - Even after deploying Worker code version `db6bc0c3-d2d5-4900-9c03-d1adffbdffcc`, the authenticated GitHub workflow status diagnostic still returned HTTP 400. Current assessment: the hidden Cloudflare `GITHUB_TOKEN` value is not a valid raw GitHub PAT string for GitHub REST API requests.
   - The temporary smoke token used during testing was rotated to a new random value, producing active Worker version `f8323a1b-aa03-4519-9ee9-9b15bb0828b0`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
