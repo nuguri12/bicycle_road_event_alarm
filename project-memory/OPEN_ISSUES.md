@@ -32,6 +32,7 @@ Last updated: 2026-08-22
   - After the user re-registered `GITHUB_TOKEN` again, the Worker secret-change version became `6dc39b02-8617-4c78-9c92-c33acc38b35e`; a fresh smoke-protected workflow-status diagnostic still returned GitHub HTTP 400. A follow-up smoke token rotation produced active Worker version `14ece178-19fd-447f-8a2b-4306ceb65d52`.
   - After another user re-entry of `GITHUB_TOKEN`, active Worker version became `933e413c-bdce-41ee-877a-e859752d3e35`, but workflow-status diagnostic still returned GitHub HTTP 400.
   - Worker code was further hardened to extract a `github_pat_...` or `gh*_...` token pattern from the secret value before building the Authorization header; after deploy and smoke-token rotation, active Worker version became `39abc495-e077-48f4-92ad-e8964251ae26`, but workflow-status diagnostic still returned GitHub HTTP 400.
+  - After the user re-entered `GITHUB_TOKEN` again, a fresh smoke-protected workflow-status diagnostic still returned GitHub HTTP 400. The smoke token was rotated again, producing active Worker version `d71a14b0-748d-4bae-b55c-e131e1e92b97`.
 
 ### 2026-08-05 missing daily Telegram message
 
