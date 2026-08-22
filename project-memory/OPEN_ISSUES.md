@@ -18,9 +18,13 @@ Last updated: 2026-08-22
 - Current assessment: This is the same root-cause class as the 2026-08-04/2026-08-05 incidents. The scheduler fires, but the Worker scheduled dispatch throws before GitHub Actions and Supabase ingest. The likely failure point is still `triggerWorkflowDispatch`, especially the hidden Cloudflare-stored `GITHUB_TOKEN` value or GitHub API authorization.
 - Proposed fix:
   - Done on 2026-08-22: deployed the local `wrangler.toml` observability change so Worker logs persist, and re-applied cron `30 22 * * *` to Worker version `ec6acfbe-217c-4767-91f8-9b2312cc4e86`.
-  - Re-register Cloudflare Worker `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`.
+  - Still required: re-register Cloudflare Worker `GITHUB_TOKEN` with a valid raw GitHub PAT string that can dispatch `manual-batch.yml` on `main`. After the 2026-08-22 re-registration attempt, the Worker reached GitHub but GitHub returned HTTP 400 even for workflow lookup.
   - Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
   - Confirm GitHub Actions run creation, Supabase `run_logs`, and Telegram publish attempt.
+- 2026-08-22 code hardening:
+  - Worker now trims env values, strips common `Bearer`/`token` prefixes and whitespace from `GITHUB_TOKEN`, and no longer sends an explicit `X-GitHub-Api-Version` header.
+  - Added smoke-protected diagnostic endpoints for GitHub workflow lookup and safe dry-run dispatch.
+  - A temporary smoke token was used for diagnostics and then rotated to a new random value.
 
 ### 2026-08-05 missing daily Telegram message
 

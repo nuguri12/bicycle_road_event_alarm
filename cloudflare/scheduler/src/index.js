@@ -1,4 +1,3 @@
-const GITHUB_API_VERSION = "2022-11-28";
 const GITHUB_ACCEPT = "application/vnd.github+json";
 const USER_AGENT = "bicycle-road-event-alarm-scheduler";
 
@@ -9,44 +8,80 @@ const DISPATCH_INPUTS = Object.freeze({
   apply_migrations: "false",
 });
 
+const SAFE_DRY_RUN_INPUTS = Object.freeze({
+  dry_run: "true",
+  enable_telegram_publish: "false",
+  force_fallback: "true",
+  apply_migrations: "false",
+});
+
 function requiredEnv(env, name) {
   const value = env[name];
   if (typeof value !== "string" || value.trim() === "") {
     throw new Error(`Missing required environment variable: ${name}`);
   }
-  return value;
+  return value.trim();
 }
 
-export function buildWorkflowDispatchRequest(env) {
+function buildWorkflowUrl(env) {
   const owner = requiredEnv(env, "GITHUB_OWNER");
   const repo = requiredEnv(env, "GITHUB_REPO");
   const workflow = requiredEnv(env, "GITHUB_WORKFLOW");
-  const ref = requiredEnv(env, "GITHUB_REF");
-  const token = requiredEnv(env, "GITHUB_TOKEN");
   const encodedWorkflow = encodeURIComponent(workflow);
 
+  return `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${encodedWorkflow}`;
+}
+
+function buildGitHubHeaders(env, authorizationScheme = "Bearer") {
+  const token = requiredEnv(env, "GITHUB_TOKEN")
+    .replace(/^(bearer|token)\s+/i, "")
+    .replace(/\s+/g, "");
+
   return {
-    url: `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${encodedWorkflow}/dispatches`,
+    Authorization: `${authorizationScheme} ${token}`,
+    Accept: GITHUB_ACCEPT,
+    "Content-Type": "application/json",
+    "User-Agent": USER_AGENT,
+  };
+}
+
+export function buildWorkflowDispatchRequest(
+  env,
+  inputs = DISPATCH_INPUTS,
+  authorizationScheme = "Bearer",
+) {
+  const ref = requiredEnv(env, "GITHUB_REF");
+
+  return {
+    url: `${buildWorkflowUrl(env)}/dispatches`,
     init: {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: GITHUB_ACCEPT,
-        "Content-Type": "application/json",
-        "X-GitHub-Api-Version": GITHUB_API_VERSION,
-        "User-Agent": USER_AGENT,
-      },
+      headers: buildGitHubHeaders(env, authorizationScheme),
       body: JSON.stringify({
         ref,
-        inputs: DISPATCH_INPUTS,
+        inputs,
       }),
     },
   };
 }
 
-export async function triggerWorkflowDispatch(env, fetcher = fetch) {
-  const request = buildWorkflowDispatchRequest(env);
-  const response = await fetcher(request.url, request.init);
+export function buildWorkflowStatusRequest(env, authorizationScheme = "Bearer") {
+  return {
+    url: buildWorkflowUrl(env),
+    init: {
+      method: "GET",
+      headers: buildGitHubHeaders(env, authorizationScheme),
+    },
+  };
+}
+
+export async function triggerWorkflowDispatch(env, fetcher = fetch, inputs = DISPATCH_INPUTS) {
+  const request = buildWorkflowDispatchRequest(env, inputs);
+  let response = await fetcher(request.url, request.init);
+  if (response.status === 400 || response.status === 401) {
+    const fallbackRequest = buildWorkflowDispatchRequest(env, inputs, "token");
+    response = await fetcher(fallbackRequest.url, fallbackRequest.init);
+  }
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`GitHub workflow dispatch failed: ${response.status} ${body}`);
@@ -65,15 +100,23 @@ async function runScheduledDispatch(env) {
   }
 }
 
-export async function handleRequest(request, env, fetcher = fetch) {
-  const url = new URL(request.url);
+function isAuthorizedSmokeRequest(request, env) {
   const smokeToken = env.SMOKE_TRIGGER_TOKEN;
   const authorization = request.headers.get("Authorization");
+  const normalizedSmokeToken =
+    typeof smokeToken === "string" ? smokeToken.trim() : "";
+
+  return (
+    normalizedSmokeToken !== "" &&
+    authorization === `Bearer ${normalizedSmokeToken}`
+  );
+}
+
+export async function handleRequest(request, env, fetcher = fetch) {
+  const url = new URL(request.url);
   if (
     url.pathname === "/__internal/run-scheduled" &&
-    typeof smokeToken === "string" &&
-    smokeToken.trim() !== "" &&
-    authorization === `Bearer ${smokeToken}`
+    isAuthorizedSmokeRequest(request, env)
   ) {
     await triggerWorkflowDispatch(env, fetcher);
     return new Response("scheduled dispatch accepted", {
@@ -81,7 +124,35 @@ export async function handleRequest(request, env, fetcher = fetch) {
     });
   }
 
-  if (url.pathname === "/__internal/run-scheduled") {
+  if (
+    url.pathname === "/__internal/run-safe-dry-run" &&
+    isAuthorizedSmokeRequest(request, env)
+  ) {
+    await triggerWorkflowDispatch(env, fetcher, SAFE_DRY_RUN_INPUTS);
+    return new Response("safe dry-run dispatch accepted", {
+      status: 202,
+    });
+  }
+
+  if (
+    url.pathname === "/__internal/github-workflow-status" &&
+    isAuthorizedSmokeRequest(request, env)
+  ) {
+    const githubRequest = buildWorkflowStatusRequest(env);
+    let response = await fetcher(githubRequest.url, githubRequest.init);
+    if (response.status === 400 || response.status === 401) {
+      const fallbackRequest = buildWorkflowStatusRequest(env, "token");
+      response = await fetcher(fallbackRequest.url, fallbackRequest.init);
+    }
+    return new Response(await response.text(), {
+      status: response.status,
+      headers: {
+        "Content-Type": response.headers.get("Content-Type") || "text/plain",
+      },
+    });
+  }
+
+  if (url.pathname.startsWith("/__internal/")) {
     return new Response("not found", {
       status: 404,
     });
