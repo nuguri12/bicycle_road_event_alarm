@@ -25,6 +25,10 @@ Last updated: 2026-08-22
   - Worker now trims env values, strips common `Bearer`/`token` prefixes and whitespace from `GITHUB_TOKEN`, and no longer sends an explicit `X-GitHub-Api-Version` header.
   - Added smoke-protected diagnostic endpoints for GitHub workflow lookup and safe dry-run dispatch.
   - A temporary smoke token was used for diagnostics and then rotated to a new random value.
+- 2026-08-22 token recheck:
+  - The user reported the newly created GitHub PAT still showed `Never used` in GitHub.
+  - A fresh smoke-protected Worker workflow-status diagnostic call reached the Worker but returned GitHub HTTP 400.
+  - Assessment: The GitHub PAT shown by the user has not been used by Cloudflare; the current Cloudflare `GITHUB_TOKEN` value is still not a valid raw PAT value for GitHub REST API requests.
 
 ### 2026-08-05 missing daily Telegram message
 

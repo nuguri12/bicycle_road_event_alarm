@@ -86,6 +86,7 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
   - Worker code was hardened to trim env values, strip common `Bearer`/`token` prefixes and whitespace from `GITHUB_TOKEN`, remove the explicit GitHub API version header, add a safe dry-run dispatch endpoint, and add a GitHub workflow status diagnostic endpoint.
   - Even after deploying Worker code version `db6bc0c3-d2d5-4900-9c03-d1adffbdffcc`, the authenticated GitHub workflow status diagnostic still returned HTTP 400. Current assessment: the hidden Cloudflare `GITHUB_TOKEN` value is not a valid raw GitHub PAT string for GitHub REST API requests.
   - The temporary smoke token used during testing was rotated to a new random value, producing active Worker version `f8323a1b-aa03-4519-9ee9-9b15bb0828b0`.
+  - The user later reported the newly created GitHub PAT still showed `Never used`. A fresh Worker workflow-status diagnostic still returned GitHub HTTP 400, confirming the PAT shown by the user is not the value currently being used successfully by Cloudflare.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
