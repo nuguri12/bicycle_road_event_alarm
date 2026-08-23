@@ -13,4 +13,4 @@ GITHUB_WORKFLOW = "manual-batch.yml"
 GITHUB_REF = "main"
 
 [triggers]
-crons = ["30 22 * * *"]
+crons = []

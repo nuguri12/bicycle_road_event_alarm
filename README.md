@@ -141,8 +141,11 @@ python -m bicycle_road_event_alarm.cli.generate_messages --run-id "<RUN_ID>" --f
 현재 운영 스케줄:
 
 ```text
-Cloudflare Cron: 30 22 * * *
+GitHub Actions schedule: 30 22 * * *
 ```
+
+Production scheduling is owned by GitHub Actions native `schedule`.
+Cloudflare Worker cron is disabled and kept only for diagnostics.
 
 Cloudflare cron은 UTC 기준입니다. 따라서 `30 22 * * *`는 한국 시간 기준 매일 07:30 실행입니다.
 

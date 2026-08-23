@@ -93,6 +93,20 @@ Last updated: 2026-07-19
 - Alternatives considered: Continue relying on GitHub schedule; use cron-job.org; use GCP Cloud Scheduler.
 - Impact: Cloudflare owns the daily 07:30 KST trigger and calls GitHub `workflow_dispatch`; GitHub no longer self-schedules to avoid duplicate sends.
 
+## 2026-08-22: Minimal recovery path for Cloudflare GitHub token failures
+
+- Decision: Do not add more Worker parsing, new dispatch mechanisms, or GitHub App plumbing while the Cloudflare `GITHUB_TOKEN` still fails GitHub workflow lookup. First validate the PAT outside Cloudflare, then re-register a known-good raw token in Cloudflare, then run the existing smoke-protected dry-run endpoint.
+- Reason: The Worker already trims whitespace, strips common `Bearer`/`token` prefixes, and extracts PAT-shaped values. Repeated smoke diagnostics still return GitHub HTTP 400, so the next smallest root-cause check is token validity/permissions, not code.
+- Alternatives considered: Add more token parsing; switch to `repository_dispatch`; create a GitHub App; run Python directly in Cloudflare; restore GitHub native schedule.
+- Impact: Preferred sequence is local PAT verification, temporary classic PAT with `repo` scope if fine-grained permissions remain unclear, Cloudflare secret re-entry, then Worker smoke. If that still fails, consider removing Cloudflare and restoring GitHub native schedule despite its prior reliability issues.
+
+## 2026-08-23: Restore GitHub native schedule and disable Cloudflare cron
+
+- Decision: Move production scheduling back to GitHub Actions native `schedule` at `30 22 * * *` and disable the Cloudflare Worker cron trigger.
+- Reason: The 2026-08-23 07:30 KST message was missing. A fresh smoke-protected Worker diagnostic reached the Worker, but GitHub workflow lookup returned HTTP 400 and safe dry-run dispatch returned HTTP 500, confirming the Cloudflare-to-GitHub dispatch path is still broken before the application batch starts.
+- Alternatives considered: Keep retrying Cloudflare `GITHUB_TOKEN` registration; add more Worker token parsing; wait for another natural run; switch to a GitHub App.
+- Impact: GitHub Actions owns the daily 07:30 KST trigger again. Cloudflare Worker remains available for diagnostics, but its cron is disabled to avoid duplicate sends if its token issue is fixed later.
+
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 
 - Decision: Retry the production smoke at 19:00 KST with more lead time before the scheduled minute.

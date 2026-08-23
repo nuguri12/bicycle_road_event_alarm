@@ -10,7 +10,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
-Current investigation: Daily Telegram messages have been missing since 2026-08-04. Supabase still has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success as of 2026-08-22. Cloudflare GraphQL previously showed scheduled crons firing with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reaches Supabase ingest. On 2026-08-22, the local observability config was deployed to Cloudflare and the cron trigger was re-applied; the remaining operator action is to re-register the Worker `GITHUB_TOKEN` with a valid GitHub PAT that can dispatch `manual-batch.yml` on `main`.
+Current investigation: Daily Telegram messages have been missing since 2026-08-04. Supabase still has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success as of 2026-08-22. Cloudflare GraphQL previously showed scheduled crons firing with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reaches Supabase ingest. On 2026-08-23, a fresh smoke-protected Worker diagnostic still returned GitHub HTTP 400 for workflow lookup and HTTP 500 for safe dry-run dispatch. Production scheduling is being moved back to GitHub Actions native `schedule`; Cloudflare cron is disabled and retained only for diagnostics.
 
 ## Current Runtime State
 
@@ -23,16 +23,16 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
 - External scheduler: `cloudflare/scheduler`
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
 - Cloudflare Worker URL: `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`
-- Latest Cloudflare deployment version: `d71a14b0-748d-4bae-b55c-e131e1e92b97`
-- Production schedule: Cloudflare Cron `30 22 * * *`
+- Latest Cloudflare deployment version: `9b671e08-dcce-4cdb-9d6e-ec0c29393f68`
+- Production schedule: GitHub Actions native schedule `30 22 * * *`
 - Meaning: every day 07:30 KST
-- Cloudflare cron trigger deployment is confirmed by Wrangler.
+- Cloudflare cron trigger is disabled to avoid duplicate sends.
 - Cloudflare Worker secret `GITHUB_TOKEN` is set as of 2026-07-04 09:20 KST (`npx wrangler secret list` returned `GITHUB_TOKEN`).
 - Cloudflare Worker secret `SMOKE_TRIGGER_TOKEN` is set for authenticated manual production smoke runs.
-- GitHub Actions native `schedule` is removed to avoid duplicate sends.
+- GitHub Actions native `schedule` is restored as the production trigger.
 - Temporary push smoke trigger has been removed after successful verification.
-- Authenticated Worker smoke endpoint `POST /__internal/run-scheduled` dispatches the same GitHub workflow payload for immediate validation.
-- Cloudflare dispatches `workflow_dispatch` with real publish inputs:
+- Authenticated Worker smoke endpoint `POST /__internal/run-scheduled` remains available for diagnostics, but Cloudflare cron is disabled.
+- GitHub Actions schedule runs with real publish inputs:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
@@ -91,6 +91,8 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
   - After another user re-entry of `GITHUB_TOKEN`, active Worker version became `933e413c-bdce-41ee-877a-e859752d3e35`, but workflow-status diagnostic still returned GitHub HTTP 400.
   - Worker code was further hardened to extract a `github_pat_...` or `gh*_...` token pattern from the secret value before building the Authorization header. After deploy and smoke-token rotation, active Worker version became `39abc495-e077-48f4-92ad-e8964251ae26`, but workflow-status diagnostic still returned GitHub HTTP 400.
   - After the user re-entered `GITHUB_TOKEN` again, a fresh smoke-protected workflow-status diagnostic still returned GitHub HTTP 400. The smoke token was rotated again, producing active Worker version `d71a14b0-748d-4bae-b55c-e131e1e92b97`.
+  - On 2026-08-23, the user reported another missing daily Telegram message. A fresh smoke-protected diagnostic reached the Worker, but workflow lookup returned HTTP 400 and safe dry-run dispatch returned HTTP 500. The smoke token rotation produced active Worker version `8bc32b0d-6245-4f4d-b54a-a29e71b2606c`. Mitigation: restore GitHub Actions native schedule and disable Cloudflare cron.
+  - Cloudflare cron-disable deploy succeeded and produced active Worker version `9b671e08-dcce-4cdb-9d6e-ec0c29393f68`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -223,11 +225,11 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
 ## Next Actions
 
 1. Continue light monitoring of daily 07:30 KST production runs.
-2. Resolve the 2026-08-04 Cloudflare Worker scheduled-dispatch failure before changing crawler/parser logic:
-   - Enable Worker observability/log persistence.
-   - Re-register Cloudflare Worker secret `GITHUB_TOKEN` with a valid GitHub PAT.
-   - Run the authenticated smoke endpoint only with operator approval because it can publish a real Telegram alert.
-   - Confirm GitHub `workflow_dispatch`, Supabase ingest, message generation, and Telegram publish all complete.
+2. Verify the restored GitHub Actions native daily schedule:
+   - Confirm a 2026-08-24 07:30 KST `schedule` run is created.
+   - Confirm `DRY_RUN=false`, `ENABLE_TELEGRAM_PUBLISH=true`, Supabase ingest, message generation, and Telegram publish complete.
+   - Keep Cloudflare cron disabled while GitHub schedule owns production.
+   - Keep Cloudflare Worker only as a diagnostic path until its `GITHUB_TOKEN` issue is separately resolved.
 3. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.

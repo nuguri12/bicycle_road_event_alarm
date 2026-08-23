@@ -1,8 +1,8 @@
 # Cloudflare Scheduler
 
-This Worker replaces GitHub Actions native `schedule` for production runs.
-Cloudflare Cron Triggers call the existing GitHub Actions `workflow_dispatch`
-entry point once per day.
+This Worker is retained for manual diagnostics only. Production scheduling has
+been moved back to GitHub Actions native `schedule` because repeated Cloudflare
+secret re-registration attempts still failed GitHub workflow lookup/dispatch.
 
 Current production URL:
 
@@ -12,13 +12,15 @@ https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev
 
 ## Schedule
 
-Cloudflare cron uses UTC.
+Cloudflare cron is disabled to avoid duplicate sends while GitHub Actions owns
+the production schedule.
 
 ```toml
-crons = ["30 22 * * *"]
+crons = []
 ```
 
-This runs every day at 07:30 KST.
+The production GitHub Actions schedule is `30 22 * * *`, which runs every day at
+07:30 KST.
 
 ## GitHub Token
 
@@ -37,19 +39,19 @@ npx wrangler secret put GITHUB_TOKEN
 npx wrangler deploy
 ```
 
-Verify that the secret exists before relying on cron:
+Verify that the secret exists before relying on the diagnostic endpoints:
 
 ```powershell
 npx wrangler secret list
 ```
 
-Expected output should include `GITHUB_TOKEN`. If it returns `[]`, scheduled
-dispatch will fail before reaching GitHub Actions.
+Expected output should include `GITHUB_TOKEN` only if Cloudflare diagnostics are
+still being used. Production scheduling no longer depends on this secret.
 
 ## Smoke Trigger Token
 
 The Worker also exposes an authenticated internal smoke endpoint for manually
-verifying the same GitHub dispatch path without waiting for the next cron tick:
+verifying the GitHub dispatch path:
 
 ```text
 POST /__internal/run-scheduled
@@ -80,8 +82,8 @@ The Worker dispatches `.github/workflows/manual-batch.yml` on `main` with:
 After deployment:
 
 1. In Cloudflare, open the Worker.
-2. Use the Cron Triggers test action, or wait for the next 07:30 KST run.
-3. Confirm a GitHub Actions `workflow_dispatch` run is created.
+2. Confirm Cron Triggers are empty.
+3. Confirm GitHub Actions owns the daily `schedule` run.
 4. Confirm the run logs include `TELEGRAM_STATUS=success`.
 
 For an immediate production smoke test, call the internal endpoint with the
