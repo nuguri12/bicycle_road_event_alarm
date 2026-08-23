@@ -9,7 +9,8 @@ def test_manual_batch_workflow_exists_with_safe_defaults() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    assert "schedule:" not in workflow
+    assert "schedule:" in workflow
+    assert 'cron: "30 22 * * *"' in workflow
     assert "concurrency:" in workflow
     assert "group: manual-batch-${{ github.ref }}" in workflow
     assert "cancel-in-progress: false" in workflow
@@ -23,9 +24,14 @@ def test_manual_batch_workflow_exists_with_safe_defaults() -> None:
 
 def test_workflow_dispatch_maps_real_publish_inputs_to_environment() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    publish_env = (
+        "ENABLE_TELEGRAM_PUBLISH: ${{ github.event_name == 'schedule' "
+        "&& 'true' || inputs.enable_telegram_publish }}"
+    )
+    dry_run_env = "DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}"
 
-    assert "ENABLE_TELEGRAM_PUBLISH: ${{ inputs.enable_telegram_publish }}" in workflow
-    assert "DRY_RUN: ${{ inputs.dry_run }}" in workflow
+    assert publish_env in workflow
+    assert dry_run_env in workflow
     assert "github.event_name == 'workflow_dispatch' && inputs.force_fallback == 'true'" in workflow
 
 
