@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-22
+Last updated: 2026-08-24
 
 ## Current Objective
 
@@ -10,7 +10,7 @@ Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-trigger
 
 MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
 
-Current investigation: Daily Telegram messages have been missing since 2026-08-04. Supabase still has no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success as of 2026-08-22. Cloudflare GraphQL previously showed scheduled crons firing with `status=scriptThrewException`, so the failure is inside the Worker scheduled dispatch path before the app batch reaches Supabase ingest. On 2026-08-23, a fresh smoke-protected Worker diagnostic still returned GitHub HTTP 400 for workflow lookup and HTTP 500 for safe dry-run dispatch. Production scheduling is being moved back to GitHub Actions native `schedule`; Cloudflare cron is disabled and retained only for diagnostics.
+Current investigation: Daily Telegram delivery through Cloudflare was broken from 2026-08-04 through 2026-08-23, so production scheduling was moved back to GitHub Actions native `schedule` and Cloudflare cron was disabled. The restored GitHub schedule created a 2026-08-24 07:48 KST ingest run and a 07:50 KST message run; Telegram publish was recorded as `success`, but the user received a no-event message while full live-source crawling for the same 2026-08-24 07:50 KST 기준 found 2 Hangang publish candidates. Root cause: the production GitHub runner timed out on Hangang event and notice sources, so the message was generated from Ara Waterway only and recorded `message_context=partial_source_unavailable`. Local fix now renders empty `partial_source_unavailable` fallback as a degraded-source warning instead of a plain no-event confirmation.
 
 ## Current Runtime State
 
@@ -93,6 +93,14 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
   - After the user re-entered `GITHUB_TOKEN` again, a fresh smoke-protected workflow-status diagnostic still returned GitHub HTTP 400. The smoke token was rotated again, producing active Worker version `d71a14b0-748d-4bae-b55c-e131e1e92b97`.
   - On 2026-08-23, the user reported another missing daily Telegram message. A fresh smoke-protected diagnostic reached the Worker, but workflow lookup returned HTTP 400 and safe dry-run dispatch returned HTTP 500. The smoke token rotation produced active Worker version `8bc32b0d-6245-4f4d-b54a-a29e71b2606c`. Mitigation: restore GitHub Actions native schedule and disable Cloudflare cron.
   - Cloudflare cron-disable deploy succeeded and produced active Worker version `9b671e08-dcce-4cdb-9d6e-ec0c29393f68`.
+- 2026-08-24 GitHub Actions native schedule recovery:
+  - Supabase recorded ingest run `a395699f-30a8-4dee-8862-a79cc47cbe02` at 2026-08-24 07:48 KST and message run `6662d4dd-47b9-439a-b114-68ca8201e621` at 2026-08-24 07:50 KST.
+  - `publish_attempts.status=success` was recorded at 2026-08-24 07:50 KST, confirming Telegram publish reached the DB-backed publish path again.
+  - The user received `2026-08-24 07:50 기준 오늘 자전거 주의 이벤트가 없습니다.`
+  - The message matched the production run's DB context only partially: Hangang events and Hangang notices timed out from the GitHub runner, Ara Waterway had 13 candidates, and all Ara normalized rows had `publish_candidate=False`.
+  - Full live-source crawling for `CHECK_KST=2026-08-24 07:50` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=20`, and `PUBLISH_COUNT=2`: Hangang event `evntSn=446` (`‘서울팅 2.0’ ｢설렘 in 서울, 한강버스편｣ 참가자 모집`) and `evntSn=441` (`한강 밤핑 (Night+Camping)`).
+  - Assessment: this was a false no-event at whole-source level caused by partial source timeout. The source outage appears runner-network-specific or transient, but the current quiet user-facing fallback hides that degradation.
+  - Local fix: `partial_source_unavailable` with no publishable events now produces a degraded-source warning, not `오늘 자전거 주의 이벤트가 없습니다.`
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -219,7 +227,7 @@ Current investigation: Daily Telegram messages have been missing since 2026-08-0
   - Ara Waterway notice `1217` was still present in the source, but the title included `[개방완료]`; it normalized to `publish_candidate=False`, so excluding it from the Telegram message was correct.
   - Supabase verification found ingest run `ac0d604e-8ce5-401f-aa9b-d1c80f563eb6`, message run `9c0966bf-5ed0-475d-bdc3-23ae7aa0dba7`, `message_context=no_event`, `published_message_count=1`, and latest `publish_attempts.status=success`.
   - DB rows for source URL `1217` show two historical normalized rows because the completed title changed the raw content hash; the latest `[개방완료]` row is linked to the current ingest run and has `publish_candidate=False`, while the older active row is not in the current run scope. `NORMALIZED_DUPLICATE_RAW_EVENT_GROUPS=0`.
-- Partial source outage currently appears as `MESSAGE_CONTEXT=partial_source_unavailable`.
+- Partial source outage appears as `MESSAGE_CONTEXT=partial_source_unavailable`; if there are no publishable events, the user-facing fallback now warns that some sources could not be checked instead of claiming true no-event.
 - No-event messages with send time can avoid duplicate hash collisions, but daily scheduling increases the chance of repeated no-event messages.
 
 ## Next Actions

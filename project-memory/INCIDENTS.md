@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-08-11
+Last updated: 2026-08-24
 
 ## Role
 
@@ -24,13 +24,24 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 
 ## 2026-08-04: Cloudflare scheduled dispatch threw before GitHub Actions
 
-- Symptom: The expected daily Telegram message did not arrive from 2026-08-04 through 2026-08-11.
+- Symptom: The expected daily Telegram message did not arrive from 2026-08-04 through 2026-08-23 while Cloudflare cron remained the production trigger.
 - Impact: No GitHub Actions batch reached Supabase ingest and no Telegram publish attempt was recorded.
 - Root cause: Unresolved. Cloudflare GraphQL confirms the Cron Trigger fired daily, but the Worker scheduled invocation ended with `status=scriptThrewException` before GitHub Actions and Supabase ingest. The likely failure point is still `triggerWorkflowDispatch`, especially the hidden Cloudflare-stored `GITHUB_TOKEN` value or GitHub API authorization.
 - Evidence: Supabase had no `run_logs` or `publish_attempts` after the 2026-08-03 07:31 KST success. Worker public URL returned `200`. Cloudflare schedules API returned `30 22 * * *`. Cloudflare secrets list showed `GITHUB_TOKEN` and `SMOKE_TRIGGER_TOKEN`. Cloudflare GraphQL showed every scheduled invocation from 2026-08-04 through 2026-08-11 ended with `status=scriptThrewException`; previous scheduled invocations from 2026-08-02 and 2026-08-03 were `success`. Live source smoke on 2026-08-11 found no source failures and 2 publish candidates.
-- Fix: Pending. Local repo now includes `[observability] enabled = true` / `head_sampling_rate = 1` in `cloudflare/scheduler/wrangler.toml` and a regression test to keep log persistence configured. Applying that setting to Cloudflare still needs a Worker-edit capable Cloudflare token or Wrangler deployment. The Cloudflare Worker `GITHUB_TOKEN` should be re-registered with a valid GitHub PAT, then the authenticated smoke dispatch should be run with operator approval.
-- Verification: Local config tests pass. Production verification is pending until Worker observability is deployed, `GITHUB_TOKEN` is re-registered, and a smoke dispatch creates a GitHub Actions run plus Supabase/Telegram records.
+- Fix: Production scheduling was moved back to GitHub Actions native `schedule` and the Cloudflare cron trigger was disabled to avoid duplicate sends. Cloudflare Worker diagnostics remain available, but the Worker `GITHUB_TOKEN` dispatch path is no longer the production trigger until its token/API issue is proven fixed.
+- Verification: The restored GitHub Actions native schedule created Supabase ingest run `a395699f-30a8-4dee-8862-a79cc47cbe02` at 2026-08-24 07:48 KST and message run `6662d4dd-47b9-439a-b114-68ca8201e621` at 2026-08-24 07:50 KST. `publish_attempts.status=success` was recorded, confirming the DB-backed Telegram publish path ran again. Remaining risk: that run had `message_context=partial_source_unavailable` from GitHub-runner Hangang source timeouts, while a local live-source check after the run found all sources available and 2 publish candidates.
 - Prevention: Keep Workers Logs enabled for scheduler Workers. On missing Telegram messages, check Supabase rows first, then Cloudflare scheduled invocation status, then GitHub workflow dispatch evidence before changing parser or Telegram code.
+- Follow-up: Track the residual GitHub-runner source timeout and Cloudflare dispatch remediation in `OPEN_ISSUES.md`.
+
+## 2026-08-24: No-event Telegram message under partial source outage
+
+- Symptom: The user received `2026-08-24 07:50 기준 오늘 자전거 주의 이벤트가 없습니다.`
+- Impact: The channel received a no-event confirmation even though full live-source crawling for the same KST 기준 found 2 publish candidates from Hangang events.
+- Root cause: The production GitHub runner timed out fetching Hangang event and notice sources during ingest, so message generation used only Ara Waterway candidates. Ara Waterway had no publishable rows, and current fallback policy renders `partial_source_unavailable` with no events as a plain no-event message.
+- Evidence: Supabase recorded ingest run `a395699f-30a8-4dee-8862-a79cc47cbe02` with `partial_source_unavailable` for Hangang sources, message run `6662d4dd-47b9-439a-b114-68ca8201e621` with `published_message_count=1`, and `publish_attempts.status=success`. DB rows for that ingest contained 13 Ara Waterway candidates and 0 publish candidates. A local live-source check found 20 candidates, no source failures, and 2 Hangang publish candidates: `evntSn=446` and `evntSn=441`.
+- Fix: Local fallback behavior now renders empty `partial_source_unavailable` as a degraded-source warning instead of a plain no-event confirmation.
+- Verification: Targeted fallback and generate-messages CLI tests pass locally. Production verification is pending until the next natural scheduled run.
+- Prevention: Do not let degraded-source empty results appear identical to true no-event confirmations. Prefer a visible partial-source warning or failed message step for `partial_source_unavailable` with zero events.
 - Follow-up: Track active remediation in `OPEN_ISSUES.md`.
 
 ## 2026-07-21: Duplicate Ara Waterway source in one Telegram message

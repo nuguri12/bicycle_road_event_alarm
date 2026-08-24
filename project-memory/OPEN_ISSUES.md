@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-08-22
+Last updated: 2026-08-24
 
 ## Operational Risks
 
@@ -35,6 +35,29 @@ Last updated: 2026-08-22
   - After the user re-entered `GITHUB_TOKEN` again, a fresh smoke-protected workflow-status diagnostic still returned GitHub HTTP 400. The smoke token was rotated again, producing active Worker version `d71a14b0-748d-4bae-b55c-e131e1e92b97`.
   - Ponytail/minimal recovery assessment: stop adding Worker code until the PAT is proven. Validate the token locally against GitHub Actions workflow lookup; if fine-grained PAT permissions remain unclear, temporarily use a classic PAT with `repo` scope; only then re-register Cloudflare `GITHUB_TOKEN` and run the existing safe dry-run smoke endpoint. Treat GitHub native schedule restoration as the fallback only if Cloudflare token dispatch keeps failing with a known-good PAT.
   - 2026-08-23: The daily Telegram message was again missing. A fresh smoke-protected Worker diagnostic reached the Worker, but GitHub workflow lookup returned HTTP 400 and safe dry-run dispatch returned HTTP 500. The smoke token rotation produced active Worker version `8bc32b0d-6245-4f4d-b54a-a29e71b2606c`. Mitigation changed production scheduling back to GitHub Actions native `schedule` and disabled the Cloudflare cron trigger. Cloudflare cron-disable deploy succeeded as Worker version `9b671e08-dcce-4cdb-9d6e-ec0c29393f68`.
+- 2026-08-24 recovery check:
+  - GitHub Actions native `schedule` produced Supabase ingest run `a395699f-30a8-4dee-8862-a79cc47cbe02` at 2026-08-24 07:48 KST and message run `6662d4dd-47b9-439a-b114-68ca8201e621` at 2026-08-24 07:50 KST.
+  - `publish_attempts.status=success` was recorded at 2026-08-24 07:50 KST, so the production publish path is partially recovered through GitHub native schedule.
+  - The user received a no-event Telegram message: `2026-08-24 07:50 기준 오늘 자전거 주의 이벤트가 없습니다.`
+  - The same run recorded `message_context=partial_source_unavailable` because Hangang events and Hangang notices timed out from the GitHub runner.
+  - DB check: the ingest run refreshed 13 Ara Waterway raw rows; all 13 linked normalized rows had `publish_candidate=False`, so the no-event message matched the degraded production source subset.
+  - Full live-source check: current crawling for `CHECK_KST=2026-08-24 07:50` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=20`, and `PUBLISH_COUNT=2`, both from Hangang events. At whole-source level, the no-event message was false.
+  - Keep this issue open until the next natural GitHub scheduled run confirms both publish delivery and healthy source crawling.
+
+### 2026-08-24 false no-event under partial source outage
+
+- Symptom: Telegram delivered `2026-08-24 07:50 기준 오늘 자전거 주의 이벤트가 없습니다.`
+- Verified evidence:
+  - Supabase message run `6662d4dd-47b9-439a-b114-68ca8201e621` published successfully with `message_context=partial_source_unavailable`.
+  - Ingest run `a395699f-30a8-4dee-8862-a79cc47cbe02` timed out on `hangang_events` and `hangang_notices`; only Ara Waterway candidates were available to the production message stage.
+  - Ara Waterway had 13 normalized rows for the run and all had `publish_candidate=False`, mostly because current closure notices were already `[개방완료]`.
+  - A full live-source check for the same KST 기준 found 20 candidates, no source failures, and 2 publish candidates from Hangang events: `evntSn=446` and `evntSn=441`.
+- Current assessment: The message was internally consistent with the partial production run but inaccurate against the complete source set. The quiet no-event fallback for `partial_source_unavailable` is now an operational risk.
+- Local fix:
+  - Minimal policy change implemented: when `message_context=partial_source_unavailable` and `events=[]`, fallback now sends a degraded-source warning instead of a plain no-event message.
+  - Regression coverage updated in `tests/unit/messaging/test_fallback_generator.py`.
+- Remaining follow-up:
+  - Investigate GitHub runner connectivity to Hangang sources only if the next natural scheduled run still records Hangang timeouts.
 
 ### 2026-08-05 missing daily Telegram message
 
