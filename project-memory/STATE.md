@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Current Objective
 
@@ -116,6 +116,11 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - Cloudflare API verification: current schedules read succeeded and returned `[]`, but both Worker code upload and schedule update failed with `403 Authentication error`. A Cloudflare token/session with Worker script and Worker cron edit permission is still required to apply the backup trigger.
   - Follow-up evidence: After commit `b2d8a11` was pushed, Supabase recorded a late 2026-08-27 production batch at 12:27 KST: ingest run `0430b976-e4fe-483e-aa1a-fb50477f15da`, message run `147427ec-0716-45b5-a11c-24fa933f1f18`, and `publish_attempts.status=success`. The user received the deterministic fallback event-alert message for Hangang event `evntSn=441` and `evntSn=446`.
   - Current assessment after late delivery: no manual dispatch or smoke endpoint was intentionally triggered from this workspace; `.github/workflows/manual-batch.yml` has no `push` trigger, and Cloudflare schedules still returned `[]`. Most likely, GitHub Actions created a delayed `schedule` run after the user screenshot, using the latest `main` workflow at execution time. Local GitHub CLI is unauthenticated, so the Actions event type still needs UI/API confirmation.
+- 2026-08-28 missing Telegram message as of 08:10 KST:
+  - Supabase had no `run_logs` or `publish_attempts` after 2026-08-27 12:27 KST.
+  - Cloudflare schedules API returned `[]`, confirming the 07:45 KST backup cron is still not applied in production.
+  - Live source check for `CHECK_KST=2026-08-28 08:10` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=21`, and `PUBLISH_COUNT=2`: Hangang event `evntSn=446` and `evntSn=441`.
+  - Current assessment: app/source/Telegram code has not run today; the primary GitHub schedule has either not created a run yet or is severely delayed again. The un-applied Cloudflare backup means there was no independent second trigger at 07:45 KST.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`

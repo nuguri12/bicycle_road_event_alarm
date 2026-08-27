@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Role
 
@@ -21,6 +21,17 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-08-28: GitHub scheduled run absent by 08:10 KST
+
+- Symptom: The expected 2026-08-28 morning Telegram message had not arrived by 08:10 KST.
+- Impact: Two active Hangang event alerts were not published by the normal morning delivery window.
+- Root cause: Unresolved, but localized to scheduling. Supabase had no runtime rows after the 2026-08-27 12:27 KST late delivery, and live source crawling was healthy with 2 publish candidates.
+- Evidence: Supabase had zero `run_logs` and zero `publish_attempts` since 2026-08-28 07:00 KST. Cloudflare schedules API returned `[]`, confirming the backup cron was still not active. Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`.
+- Fix: None applied yet during diagnosis. The existing local/repo fix for a Cloudflare backup cron exists, but it has not been applied to Cloudflare production because the current `CLOUDFLARE_API_TOKEN` cannot edit Worker scripts or schedules.
+- Verification: DB and Cloudflare API checks verified no production batch or backup trigger had run by 08:10 KST.
+- Prevention: Complete Cloudflare backup deployment with a Worker-edit-capable credential, or move the primary scheduler to a more reliable external cron once credentialing is fixed.
+- Follow-up: Confirm in GitHub Actions UI whether a 2026-08-28 delayed `Scheduled` run appears later.
 
 ## 2026-08-27: GitHub scheduled run was not created
 

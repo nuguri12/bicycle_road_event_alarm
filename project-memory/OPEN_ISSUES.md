@@ -1,8 +1,23 @@
 # Open Issues
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Operational Risks
+
+### 2026-08-28 missing daily Telegram message as of 08:10 KST
+
+- Symptom: The user reported no Telegram message had arrived by 2026-08-28 08:10 KST.
+- Verified evidence:
+  - Supabase had zero `run_logs` and zero `publish_attempts` since 2026-08-28 07:00 KST.
+  - Latest Supabase rows are still the late 2026-08-27 12:27 KST production batch.
+  - Cloudflare schedules API returned `[]`, so the planned 07:45 KST backup cron is not active in production.
+  - Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`.
+  - Unauthenticated GitHub API returned 404 for workflow runs, and local `gh` is not authenticated, so Actions event/log verification remains blocked from this local environment.
+- Current assessment: The application pipeline has not run today. This is not a source, normalization, or Telegram send failure. The primary GitHub native `schedule` either has not created the run yet or is again severely delayed, and the Cloudflare backup did not fire because its production cron remains unapplied.
+- Remaining next check:
+  - Confirm in the GitHub Actions UI whether a 2026-08-28 run appears later and whether its event is `Scheduled`.
+  - Apply Cloudflare Worker code and cron config with a Worker-edit-capable Cloudflare credential, then verify schedules include `45 22 * * *`.
+  - Consider replacing GitHub native schedule as primary if delayed schedules continue after the backup credential issue is resolved.
 
 ### 2026-08-27 missing daily Telegram message
 
