@@ -23,8 +23,14 @@ Last updated: 2026-08-27
   - Cloudflare schedules API read succeeded and showed no active cron triggers.
   - Worker script upload and schedule update with the current `.env` `CLOUDFLARE_API_TOKEN` both failed with Cloudflare API `403 Authentication error`.
   - The local repository change is ready, but the Cloudflare production backup trigger is not applied until a token/session with Worker script and Worker cron edit permission is used.
+- Follow-up evidence:
+  - After commit `b2d8a11` was pushed, Supabase recorded a late 2026-08-27 production batch at 12:27 KST: ingest run `0430b976-e4fe-483e-aa1a-fb50477f15da`, message run `147427ec-0716-45b5-a11c-24fa933f1f18`, and `publish_attempts.status=success`.
+  - The user received the deterministic fallback event-alert message for Hangang event `evntSn=441` and `evntSn=446`.
+  - No manual dispatch or smoke endpoint was intentionally triggered from this workspace. The workflow has no `push` trigger, and Cloudflare schedules still returned `[]`.
+  - Current likely cause: GitHub Actions created a delayed native `schedule` run after the user screenshot, using the latest `main` workflow at execution time. Local `gh` is unauthenticated, so the Actions event type still needs confirmation from the GitHub UI or an authenticated API call.
 - Remaining next check:
   - Apply Cloudflare Worker code and cron config with a Worker-edit-capable Cloudflare credential, then verify schedules include `45 22 * * *`.
+  - Confirm the 12:27 KST GitHub Actions run event type in the Actions UI. If it says `Scheduled`, this incident should be reclassified from dropped schedule to severely delayed schedule.
 
 ### 2026-08-04 through 2026-08-11 missing daily Telegram messages
 

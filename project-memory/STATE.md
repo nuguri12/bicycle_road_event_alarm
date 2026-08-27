@@ -114,6 +114,8 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - Local remediation: GitHub scheduled runs now force deterministic fallback message generation, and Cloudflare Worker dispatch payload also uses `force_fallback=true` so the DB message-hash duplicate guard can skip duplicates if the GitHub primary and Cloudflare backup both run.
   - Local Cloudflare backup config: `cloudflare/scheduler/wrangler.toml` now declares `crons = ["45 22 * * *"]` (07:45 KST).
   - Cloudflare API verification: current schedules read succeeded and returned `[]`, but both Worker code upload and schedule update failed with `403 Authentication error`. A Cloudflare token/session with Worker script and Worker cron edit permission is still required to apply the backup trigger.
+  - Follow-up evidence: After commit `b2d8a11` was pushed, Supabase recorded a late 2026-08-27 production batch at 12:27 KST: ingest run `0430b976-e4fe-483e-aa1a-fb50477f15da`, message run `147427ec-0716-45b5-a11c-24fa933f1f18`, and `publish_attempts.status=success`. The user received the deterministic fallback event-alert message for Hangang event `evntSn=441` and `evntSn=446`.
+  - Current assessment after late delivery: no manual dispatch or smoke endpoint was intentionally triggered from this workspace; `.github/workflows/manual-batch.yml` has no `push` trigger, and Cloudflare schedules still returned `[]`. Most likely, GitHub Actions created a delayed `schedule` run after the user screenshot, using the latest `main` workflow at execution time. Local GitHub CLI is unauthenticated, so the Actions event type still needs UI/API confirmation.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
