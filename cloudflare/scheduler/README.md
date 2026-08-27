@@ -1,8 +1,9 @@
 # Cloudflare Scheduler
 
-This Worker is retained for manual diagnostics only. Production scheduling has
-been moved back to GitHub Actions native `schedule` because repeated Cloudflare
-secret re-registration attempts still failed GitHub workflow lookup/dispatch.
+This Worker is the backup daily trigger for the production GitHub Actions batch.
+GitHub Actions native `schedule` remains the primary trigger, but GitHub
+scheduled events are best-effort and may be dropped, so this Worker dispatches
+the same workflow a few minutes later.
 
 Current production URL:
 
@@ -12,15 +13,16 @@ https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev
 
 ## Schedule
 
-Cloudflare cron is disabled to avoid duplicate sends while GitHub Actions owns
-the production schedule.
+Cloudflare cron is enabled as a backup trigger at 07:45 KST.
 
 ```toml
-crons = []
+crons = ["45 22 * * *"]
 ```
 
 The production GitHub Actions schedule is `30 22 * * *`, which runs every day at
-07:30 KST.
+07:30 KST. Both paths use deterministic fallback message generation so the
+existing successful-message hash guard can skip duplicate sends if both triggers
+run on the same day.
 
 ## GitHub Token
 
@@ -72,7 +74,7 @@ The Worker dispatches `.github/workflows/manual-batch.yml` on `main` with:
 {
   "dry_run": "false",
   "enable_telegram_publish": "true",
-  "force_fallback": "false",
+  "force_fallback": "true",
   "apply_migrations": "false"
 }
 ```
@@ -82,8 +84,8 @@ The Worker dispatches `.github/workflows/manual-batch.yml` on `main` with:
 After deployment:
 
 1. In Cloudflare, open the Worker.
-2. Confirm Cron Triggers are empty.
-3. Confirm GitHub Actions owns the daily `schedule` run.
+2. Confirm Cron Triggers include `45 22 * * *`.
+3. Confirm GitHub Actions still owns the primary daily `schedule` run.
 4. Confirm the run logs include `TELEGRAM_STATUS=success`.
 
 For an immediate production smoke test, call the internal endpoint with the

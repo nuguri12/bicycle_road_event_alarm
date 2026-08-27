@@ -1,8 +1,30 @@
 # Open Issues
 
-Last updated: 2026-08-24
+Last updated: 2026-08-27
 
 ## Operational Risks
+
+### 2026-08-27 missing daily Telegram message
+
+- Symptom: The user reported no Telegram message arrived for the 2026-08-27 morning run.
+- Verified evidence:
+  - Supabase had no `run_logs` or `publish_attempts` after the 2026-08-26 07:56 KST successful message run.
+  - User-provided GitHub Actions screenshot at 2026-08-27 11:26 KST showed no 2026-08-27 workflow run; latest scheduled run was `Manual Batch #84` on 2026-08-26 07:55 KST.
+  - Live source check for `CHECK_KST=2026-08-27 07:50` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`.
+  - Current local `main` and `origin/main` are both commit `20180e5`.
+  - Local workflow-equivalent checks passed: `python -m pytest -q`, `python -m ruff check .`, `python -m black --check .`, `python -m mypy src tests`, `python -m compileall src`, and `python -m pytest tests/unit/test_github_actions_workflow.py -q`.
+  - Local `gh` is not authenticated, and unauthenticated GitHub API returned 404 for Actions workflow runs, so GitHub Actions log inspection is blocked.
+- Current assessment: This is not a source no-event and not a Telegram publish failure. The GitHub Actions native `schedule` did not create the 2026-08-27 run.
+- Local remediation:
+  - Treat GitHub native `schedule` as best-effort and add Cloudflare Worker cron as a backup at `45 22 * * *` (07:45 KST).
+  - Force deterministic fallback message generation for GitHub scheduled runs and Cloudflare Worker dispatches to stabilize `message_hash` duplicate prevention if both triggers run.
+  - Keep manual workflow dispatch defaults safe; manual real publish still requires explicit inputs.
+- Deployment status:
+  - Cloudflare schedules API read succeeded and showed no active cron triggers.
+  - Worker script upload and schedule update with the current `.env` `CLOUDFLARE_API_TOKEN` both failed with Cloudflare API `403 Authentication error`.
+  - The local repository change is ready, but the Cloudflare production backup trigger is not applied until a token/session with Worker script and Worker cron edit permission is used.
+- Remaining next check:
+  - Apply Cloudflare Worker code and cron config with a Worker-edit-capable Cloudflare credential, then verify schedules include `45 22 * * *`.
 
 ### 2026-08-04 through 2026-08-11 missing daily Telegram messages
 
@@ -58,6 +80,21 @@ Last updated: 2026-08-24
   - Regression coverage updated in `tests/unit/messaging/test_fallback_generator.py`.
 - Remaining follow-up:
   - Investigate GitHub runner connectivity to Hangang sources only if the next natural scheduled run still records Hangang timeouts.
+
+### 2026-08-25/2026-08-26 OpenAI message format variability
+
+- Symptom: User-received Telegram messages for the same two Hangang event sources used different line formats and labels across days:
+  - `[주의/혼잡] ... 한강 밤핑(행사)` / `[주의/혼잡] ... 서울팅 2.0 ...`
+  - `[중] ... 한강 밤핑(Night+Camping) 행사/축제 영향 가능` / `[중] ... 서울팅 2.0 ...`
+- Verified evidence:
+  - Production DB rows for 2026-08-25 and 2026-08-26 recorded successful `event_alert` message runs and Telegram publish attempts.
+  - 2026-08-26 normalized rows had exactly 2 publish candidates: Hangang event `evntSn=441` with date range `2026-08-01` through `2026-08-31`, and `evntSn=446` with date range `2026-08-18` through `2026-09-04`.
+  - Live source replay for 2026-08-26 matched the same 2 candidates. Current live replay for 2026-08-25 also sees a newer same-day notice that was posted after the morning run, so it should not be used to contradict the 2026-08-25 morning message.
+- Current assessment: Source and normalized event selection are consistent for the two user-provided messages. The issue is message presentation determinism: OpenAI output is accepted if it is non-empty, under 600 characters, and includes every source URL, so labels and phrasing can vary day to day.
+- Proposed fix:
+  - Minimal option: use deterministic fallback for event alerts until message format requirements are stable.
+  - Alternative: tighten the OpenAI prompt and validator to require an exact label/date/location/reason template.
+  - Do not change crawler or normalization rules for this symptom unless future source comparison shows the selected candidates are wrong.
 
 ### 2026-08-05 missing daily Telegram message
 

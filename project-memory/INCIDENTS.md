@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-08-24
+Last updated: 2026-08-27
 
 ## Role
 
@@ -21,6 +21,17 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-08-27: GitHub scheduled run was not created
+
+- Symptom: The expected 2026-08-27 morning Telegram message did not arrive.
+- Impact: Two active Hangang event alerts were not published at the normal morning delivery time.
+- Root cause: GitHub Actions native `schedule` did not create a 2026-08-27 workflow run. Supabase had no `run_logs` or `publish_attempts` after the 2026-08-26 successful message run, and the user-provided Actions screenshot showed no 2026-08-27 run. Source crawling was healthy locally.
+- Evidence: Live source check for `CHECK_KST=2026-08-27 07:50` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`. Local workflow-equivalent checks passed on `origin/main`.
+- Fix: Local config now keeps GitHub Actions schedule as primary at `30 22 * * *` and adds a Cloudflare Worker backup cron at `45 22 * * *`. Scheduled/backup paths force deterministic fallback message generation so duplicate publish prevention can rely on a stable message hash.
+- Verification: Targeted workflow/config tests pass locally. Cloudflare schedule read succeeded and showed no active cron triggers before the fix attempt.
+- Prevention: Treat GitHub native schedule as best-effort for time-sensitive alerts and keep an independently hosted backup trigger.
+- Follow-up: Applying the Cloudflare Worker code and cron through the current `.env` `CLOUDFLARE_API_TOKEN` failed with `403 Authentication error`; use a Cloudflare credential with Worker script and Worker cron edit permission, then verify the live schedule includes `45 22 * * *`.
 
 ## 2026-08-04: Cloudflare scheduled dispatch threw before GitHub Actions
 

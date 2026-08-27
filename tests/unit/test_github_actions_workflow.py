@@ -29,10 +29,15 @@ def test_workflow_dispatch_maps_real_publish_inputs_to_environment() -> None:
         "&& 'true' || inputs.enable_telegram_publish }}"
     )
     dry_run_env = "DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || inputs.dry_run }}"
+    force_fallback_env = (
+        "FORCE_FALLBACK: ${{ github.event_name == 'schedule' "
+        "&& 'true' || inputs.force_fallback }}"
+    )
 
     assert publish_env in workflow
     assert dry_run_env in workflow
-    assert "github.event_name == 'workflow_dispatch' && inputs.force_fallback == 'true'" in workflow
+    assert force_fallback_env in workflow
+    assert 'if [ "$FORCE_FALLBACK" = "true" ]' in workflow
 
 
 def test_manual_batch_workflow_runs_project_checks_and_batch_commands() -> None:

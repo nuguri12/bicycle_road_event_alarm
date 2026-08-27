@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-24
+Last updated: 2026-08-27
 
 ## Current Objective
 
@@ -26,7 +26,7 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 - Latest Cloudflare deployment version: `9b671e08-dcce-4cdb-9d6e-ec0c29393f68`
 - Production schedule: GitHub Actions native schedule `30 22 * * *`
 - Meaning: every day 07:30 KST
-- Cloudflare cron trigger is disabled to avoid duplicate sends.
+- Cloudflare cron trigger should be re-enabled as a backup at `45 22 * * *` (07:45 KST), but applying the setting through the current `.env` `CLOUDFLARE_API_TOKEN` is blocked by Cloudflare API `403 Authentication error`.
 - Cloudflare Worker secret `GITHUB_TOKEN` is set as of 2026-07-04 09:20 KST (`npx wrangler secret list` returned `GITHUB_TOKEN`).
 - Cloudflare Worker secret `SMOKE_TRIGGER_TOKEN` is set for authenticated manual production smoke runs.
 - GitHub Actions native `schedule` is restored as the production trigger.
@@ -101,6 +101,19 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - Full live-source crawling for `CHECK_KST=2026-08-24 07:50` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=20`, and `PUBLISH_COUNT=2`: Hangang event `evntSn=446` (`‘서울팅 2.0’ ｢설렘 in 서울, 한강버스편｣ 참가자 모집`) and `evntSn=441` (`한강 밤핑 (Night+Camping)`).
   - Assessment: this was a false no-event at whole-source level caused by partial source timeout. The source outage appears runner-network-specific or transient, but the current quiet user-facing fallback hides that degradation.
   - Local fix: `partial_source_unavailable` with no publishable events now produces a degraded-source warning, not `오늘 자전거 주의 이벤트가 없습니다.`
+- 2026-08-25 and 2026-08-26 Telegram message checks:
+  - Both production message runs recorded `message_context=event_alert` and `publish_attempts.status=success`.
+  - The user-received messages matched the two active Hangang event sources: `evntSn=441` (`한강 밤핑`) and `evntSn=446` (`서울팅 2.0 한강버스편`).
+  - Message wording varied between days (`[주의/혼잡]` vs `[중]` and title/reason phrasing), which appears to be OpenAI output variability rather than source/normalization mismatch.
+- 2026-08-27 missing Telegram message:
+  - At 2026-08-27 11:23 KST, Supabase had no `run_logs` or `publish_attempts` after the 2026-08-26 07:56 KST successful message run.
+  - User-provided GitHub Actions screenshot at 2026-08-27 11:26 KST showed no 2026-08-27 workflow run; latest scheduled run was `Manual Batch #84` on 2026-08-26 07:55 KST.
+  - Live source check for `CHECK_KST=2026-08-27 07:50` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=21`, and `PUBLISH_COUNT=2`: Hangang event `evntSn=446` and `evntSn=441`.
+  - Local workflow-equivalent checks passed on current `origin/main` commit `20180e5`: pytest, Ruff, Black, mypy, compileall, and workflow config unit tests.
+  - Current assessment: source crawling and app logic are healthy locally; GitHub Actions native `schedule` did not create today's run. Local `gh` is not authenticated, and unauthenticated GitHub API returned 404 for workflow runs, so log/API verification remains blocked.
+  - Local remediation: GitHub scheduled runs now force deterministic fallback message generation, and Cloudflare Worker dispatch payload also uses `force_fallback=true` so the DB message-hash duplicate guard can skip duplicates if the GitHub primary and Cloudflare backup both run.
+  - Local Cloudflare backup config: `cloudflare/scheduler/wrangler.toml` now declares `crons = ["45 22 * * *"]` (07:45 KST).
+  - Cloudflare API verification: current schedules read succeeded and returned `[]`, but both Worker code upload and schedule update failed with `403 Authentication error`. A Cloudflare token/session with Worker script and Worker cron edit permission is still required to apply the backup trigger.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -115,7 +128,7 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 - Normalize and message generation are scoped to that run id.
 - Publish candidates are limited to events active on the KST date when they were fetched.
 - Source outage and true no-event are separated in CLI/DB message context.
-- Partial source outage is recorded in DB and CLI, but user-facing no-event text stays quiet.
+- Partial source outage is recorded in DB and CLI; empty partial-source fallback now warns users that some sources could not be checked.
 - Empty fallback messages include KST send date and time.
 - Telegram publish attempts are recorded for success, failed, and non-empty skipped outcomes.
 - Production-mode Telegram publish failures return a non-zero CLI exit code so GitHub Actions fails visibly.

@@ -33,7 +33,7 @@ test("buildWorkflowDispatchRequest creates real publish dispatch request", () =>
     inputs: {
       dry_run: "false",
       enable_telegram_publish: "true",
-      force_fallback: "false",
+      force_fallback: "true",
       apply_migrations: "false",
     },
   });
@@ -52,7 +52,7 @@ test("buildWorkflowDispatchRequest trims environment values", () => {
     inputs: {
       dry_run: "false",
       enable_telegram_publish: "true",
-      force_fallback: "false",
+      force_fallback: "true",
       apply_migrations: "false",
     },
   });

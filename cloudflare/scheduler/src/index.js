@@ -4,7 +4,7 @@ const USER_AGENT = "bicycle-road-event-alarm-scheduler";
 const DISPATCH_INPUTS = Object.freeze({
   dry_run: "false",
   enable_telegram_publish: "true",
-  force_fallback: "false",
+  force_fallback: "true",
   apply_migrations: "false",
 });
 
