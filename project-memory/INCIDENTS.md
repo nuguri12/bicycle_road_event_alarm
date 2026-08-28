@@ -26,12 +26,12 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 
 - Symptom: The expected 2026-08-28 morning Telegram message had not arrived by 08:10 KST.
 - Impact: Two active Hangang event alerts were not published by the normal morning delivery window.
-- Root cause: Unresolved, but localized to scheduling. Supabase had no runtime rows after the 2026-08-27 12:27 KST late delivery, and live source crawling was healthy with 2 publish candidates.
-- Evidence: Supabase had zero `run_logs` and zero `publish_attempts` since 2026-08-28 07:00 KST. Cloudflare schedules API returned `[]`, confirming the backup cron was still not active. Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`.
+- Root cause: Localized to the GitHub Actions schedule creation/queueing layer. Supabase had no runtime rows after the 2026-08-27 12:27 KST late delivery at 08:10 KST, live source crawling was healthy, and Cloudflare backup cron was not active. The batch later appeared and finished quickly once app execution started.
+- Evidence: Supabase had zero `run_logs` and zero `publish_attempts` since 2026-08-28 07:00 KST at the 08:10 check. Cloudflare schedules API returned `[]`, confirming the backup cron was still not active. Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`. Supabase later recorded ingest run `7ccdda61-e24a-4567-ac93-1aee9572dd6d`, message run `665dba8b-4983-47d2-bd04-ad0d95582960`, and `publish_attempts.status=success` at 15:14 KST.
 - Fix: None applied yet during diagnosis. The existing local/repo fix for a Cloudflare backup cron exists, but it has not been applied to Cloudflare production because the current `CLOUDFLARE_API_TOKEN` cannot edit Worker scripts or schedules.
-- Verification: DB and Cloudflare API checks verified no production batch or backup trigger had run by 08:10 KST.
+- Verification: DB and Cloudflare API checks verified no production batch or backup trigger had run by 08:10 KST. DB checks after delivery show the DB-visible app steps ran from `15:14:07` to `15:14:39` KST, so the delay was before the app pipeline started.
 - Prevention: Complete Cloudflare backup deployment with a Worker-edit-capable credential, or move the primary scheduler to a more reliable external cron once credentialing is fixed.
-- Follow-up: Confirm in GitHub Actions UI whether a 2026-08-28 delayed `Scheduled` run appears later.
+- Follow-up: Confirm in GitHub Actions UI whether the 2026-08-28 run event was `Scheduled`, and compare run created/queued time with job started time to distinguish delayed event delivery from Actions queue delay.
 
 ## 2026-08-27: GitHub scheduled run was not created
 

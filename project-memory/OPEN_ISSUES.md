@@ -14,8 +14,13 @@ Last updated: 2026-08-28
   - Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`.
   - Unauthenticated GitHub API returned 404 for workflow runs, and local `gh` is not authenticated, so Actions event/log verification remains blocked from this local environment.
 - Current assessment: The application pipeline has not run today. This is not a source, normalization, or Telegram send failure. The primary GitHub native `schedule` either has not created the run yet or is again severely delayed, and the Cloudflare backup did not fire because its production cron remains unapplied.
+- Follow-up evidence:
+  - Supabase later recorded the production batch at 15:14 KST: ingest run `7ccdda61-e24a-4567-ac93-1aee9572dd6d`, message run `665dba8b-4983-47d2-bd04-ad0d95582960`, and `publish_attempts.status=success`.
+  - Once DB-visible app steps started, runtime was short: `15:14:07` through `15:14:39` KST.
+  - Current assessment after late delivery: the delay happened before the application pipeline started, at the GitHub Actions native schedule creation/queueing layer. Cloudflare was not a factor because live schedules still returned `[]`.
 - Remaining next check:
   - Confirm in the GitHub Actions UI whether a 2026-08-28 run appears later and whether its event is `Scheduled`.
+  - If the UI shows a 07:30 scheduled event with a much later start time, classify this as GitHub Actions queue delay. If it shows the run was created near 15:14, classify it as schedule event delivery delay.
   - Apply Cloudflare Worker code and cron config with a Worker-edit-capable Cloudflare credential, then verify schedules include `45 22 * * *`.
   - Consider replacing GitHub native schedule as primary if delayed schedules continue after the backup credential issue is resolved.
 
