@@ -18,6 +18,7 @@ HIGH_IMPACT_KEYWORDS = (
     "우회",
     "자전거도로 통제",
     "통행 차단",
+    "통행차단",
 )
 MEDIUM_IMPACT_KEYWORDS = ("축제", "대규모 행사", "공원 행사", "마라톤")
 LOW_IMPACT_KEYWORDS = ("소규모 행사", "체험 행사", "안내 부스")

@@ -82,7 +82,33 @@ def _event_lines(index: int, event: MessageEvent) -> list[str]:
 
 # 시간 표시: 종료 시간이 있으면 범위로, 없으면 시작 시간만 표시합니다.
 def _format_time_range(event: MessageEvent) -> str:
-    start_text = event.start_datetime.strftime("%Y-%m-%d %H:%M")
+    start_kst = _as_kst(event.start_datetime)
     if event.end_datetime is None:
-        return start_text
-    return f"{start_text}~{event.end_datetime.strftime('%H:%M')}"
+        if _is_midnight(start_kst):
+            return start_kst.strftime("%Y-%m-%d")
+        return start_kst.strftime("%Y-%m-%d %H:%M")
+
+    end_kst = _as_kst(event.end_datetime)
+    if _is_all_day_range(start_kst, end_kst):
+        if start_kst.date() == end_kst.date():
+            return start_kst.strftime("%Y-%m-%d")
+        return f"{start_kst.strftime('%Y-%m-%d')}~{end_kst.strftime('%Y-%m-%d')}"
+
+    start_text = start_kst.strftime("%Y-%m-%d %H:%M")
+    if start_kst.date() == end_kst.date():
+        return f"{start_text}~{end_kst.strftime('%H:%M')}"
+    return f"{start_text}~{end_kst.strftime('%Y-%m-%d %H:%M')}"
+
+
+def _as_kst(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(KST)
+
+
+def _is_midnight(value: datetime) -> bool:
+    return value.hour == 0 and value.minute == 0 and value.second == 0 and value.microsecond == 0
+
+
+def _is_all_day_range(start: datetime, end: datetime) -> bool:
+    return _is_midnight(start) and end.hour == 23 and end.minute == 59

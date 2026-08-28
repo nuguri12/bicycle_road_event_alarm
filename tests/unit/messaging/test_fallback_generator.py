@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from bicycle_road_event_alarm.messaging.fallback_generator import generate_fallback_message
 from bicycle_road_event_alarm.messaging.message_input import MessageEvent
@@ -9,12 +10,13 @@ def make_message_event(
     title: str = "잠실 자전거도로 교통통제",
     impact: str = "high",
     start: datetime = datetime(2026, 7, 4, 8, 0, tzinfo=UTC),
+    end: datetime | None = datetime(2026, 7, 4, 12, 0, tzinfo=UTC),
     source_url: str = "https://example.test/notice",
 ) -> MessageEvent:
     return MessageEvent(
         title=title,
         start_datetime=start,
-        end_datetime=datetime(2026, 7, 4, 12, 0, tzinfo=UTC),
+        end_datetime=end,
         location_name="잠실대교 남단 ~ 뚝섬한강공원",
         region="서울",
         event_type="road_closure",
@@ -22,6 +24,9 @@ def make_message_event(
         cyclist_impact_reason="교통통제 또는 행사 관련 표현 감지",
         source_url=source_url,
     )
+
+
+KST = ZoneInfo("Asia/Seoul")
 
 
 def test_generate_fallback_message_sorts_by_impact_then_datetime() -> None:
@@ -41,6 +46,35 @@ def test_generate_fallback_message_sorts_by_impact_then_datetime() -> None:
     assert result.text.index("높은 영향 통제") < result.text.index("낮은 영향 행사")
     assert "https://example.test/notice" in result.text
     assert "https://example.test/low" in result.text
+
+
+def test_generate_fallback_message_formats_all_day_dates_without_noisy_midnight_times() -> None:
+    result = generate_fallback_message(
+        [
+            make_message_event(
+                title="한강 밤핑",
+                impact="medium",
+                start=datetime(2026, 8, 1, 0, 0, tzinfo=KST),
+                end=datetime(2026, 8, 31, 23, 59, tzinfo=KST),
+            )
+        ]
+    )
+
+    assert "2026-08-01~2026-08-31" in result.text
+    assert "00:00" not in result.text
+    assert "23:59" not in result.text
+
+
+def test_generate_fallback_message_formats_timed_events_in_kst() -> None:
+    result = generate_fallback_message(
+        [
+            make_message_event(
+                start=datetime(2026, 8, 28, 0, 0, tzinfo=UTC),
+            )
+        ]
+    )
+
+    assert "2026-08-28 09:00" in result.text
 
 
 def test_generate_fallback_message_includes_generated_date_for_empty_events() -> None:

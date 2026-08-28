@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ DATE_RANGE_PATTERN = re.compile(
     r"\s*~\s*"
     r"(?P<end_year>\d{4})[.\-/](?P<end_month>\d{1,2})[.\-/](?P<end_day>\d{1,2})"
 )
+KST = ZoneInfo("Asia/Seoul")
 
 
 # 날짜 추출: 원문 날짜, 본문, 제목 순서로 명확한 숫자형 날짜를 찾습니다.
@@ -52,7 +54,7 @@ def _build_date_range(match: re.Match[str]) -> ParsedEventDateTime:
         int(match.group("start_day")),
         0,
         0,
-        tzinfo=UTC,
+        tzinfo=KST,
     )
     end = datetime(
         int(match.group("end_year")),
@@ -60,7 +62,7 @@ def _build_date_range(match: re.Match[str]) -> ParsedEventDateTime:
         int(match.group("end_day")),
         23,
         59,
-        tzinfo=UTC,
+        tzinfo=KST,
     )
     return ParsedEventDateTime(start=start, end=end)
 
@@ -72,7 +74,7 @@ def _build_datetime(match: re.Match[str]) -> ParsedEventDateTime:
     day = int(match.group("day"))
     start_hour = int(match.group("start_hour") or 0)
     start_minute = int(match.group("start_minute") or 0)
-    start = datetime(year, month, day, start_hour, start_minute, tzinfo=UTC)
+    start = datetime(year, month, day, start_hour, start_minute, tzinfo=KST)
 
     if match.group("end_hour") is None:
         return ParsedEventDateTime(start=start, end=None)
@@ -83,6 +85,6 @@ def _build_datetime(match: re.Match[str]) -> ParsedEventDateTime:
         day,
         int(match.group("end_hour") or 0),
         int(match.group("end_minute") or 0),
-        tzinfo=UTC,
+        tzinfo=KST,
     )
     return ParsedEventDateTime(start=start, end=end)

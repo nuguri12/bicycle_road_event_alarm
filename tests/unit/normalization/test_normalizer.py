@@ -151,6 +151,41 @@ def test_normalize_raw_event_uses_ara_detail_blocked_sections_as_location() -> N
     assert normalized.publish_candidate is True
 
 
+def test_normalize_raw_event_extracts_ara_weather_standard_sections_from_body() -> None:
+    normalized = normalize_raw_event(
+        make_raw_event(
+            raw_title="강우 및 강설에 따른 친수시설(자전거도로, 전망대 등) 통행차단 기준 알림",
+            raw_date_text="2026-08-28",
+            raw_location_text=None,
+            raw_body=(
+                "아라뱃길 이용객에 안전한 친수 공간 제공을 위하여, 강우 및 강설시 "
+                "기상 여건에 따라 아래와 같이 친수시설 통행을 차단함을 알려드립니다. "
+                "□ 강우 시 친수시설 차단 기준 "
+                "-(아라마루 전망대) 강우 발생 즉시 및 미끄럼의 위험이 있는 경우 "
+                "-(아라폭포 철재계단) 강우 발생 즉시 및 미끄럼의 위험이 있는 경우 "
+                "-(굴포천 연결수로 자전거도로) 강우 발생 즉시 "
+                "-(북측 자전거도로 시천교~계양대교) 10~20mm 이상 예보시 "
+                "-(남측 자전거도로 시천교~야생화테라스) 10~20mm 이상 예보시 "
+                "□ 강설 시 친수시설 차단 기준 "
+                "-(아라마루 전망대) 강설 발생 즉시 및 미끄럼의 위험이 있는 경우 "
+                "-(아라폭포 철재계단) 강설 발생 즉시 및 미끄럼의 위험이 있는 경우 "
+                "-(굴포천 연결수로 자전거도로) 강설 발생 즉시 "
+                "-(북측 자전거도로 시천교~계양대교) 강설 발생 즉시 "
+                "-(남측 자전거도로 시천교~야생화테라스) 강설 발생 즉시"
+            ),
+            fetched_at=datetime(2026, 8, 27, 23, 10, tzinfo=UTC),
+        )
+    )
+
+    assert normalized.validation_status == "valid"
+    assert normalized.region == "경기"
+    assert normalized.location_name == (
+        "아라뱃길 친수시설(아라마루 전망대, 아라폭포 철재계단, "
+        "굴포천 연결수로 자전거도로, 북측 자전거도로 시천교~계양대교 등)"
+    )
+    assert normalized.publish_candidate is True
+
+
 def test_normalize_raw_event_does_not_publish_completed_indefinite_closure() -> None:
     normalized = normalize_raw_event(
         make_raw_event(

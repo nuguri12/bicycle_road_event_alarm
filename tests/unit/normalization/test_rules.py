@@ -1,9 +1,12 @@
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from bicycle_road_event_alarm.normalization.classifier import classify_event
 from bicycle_road_event_alarm.normalization.datetime import parse_event_datetime
 from bicycle_road_event_alarm.normalization.location import extract_location
 from bicycle_road_event_alarm.normalization.title import normalize_title
+
+KST = ZoneInfo("Asia/Seoul")
 
 
 def test_normalize_title_collapses_whitespace() -> None:
@@ -15,8 +18,8 @@ def test_parse_event_datetime_extracts_korean_numeric_range() -> None:
 
     result = parse_event_datetime("2026.07.04 08:00 ~ 12:00", None, None, fetched_at)
 
-    assert result.start == datetime(2026, 7, 4, 8, 0, tzinfo=UTC)
-    assert result.end == datetime(2026, 7, 4, 12, 0, tzinfo=UTC)
+    assert result.start == datetime(2026, 7, 4, 8, 0, tzinfo=KST)
+    assert result.end == datetime(2026, 7, 4, 12, 0, tzinfo=KST)
 
 
 def test_parse_event_datetime_extracts_full_date_range() -> None:
@@ -24,8 +27,8 @@ def test_parse_event_datetime_extracts_full_date_range() -> None:
 
     result = parse_event_datetime("2026-07-01(수) ~ 2026-07-05(일)", None, None, fetched_at)
 
-    assert result.start == datetime(2026, 7, 1, 0, 0, tzinfo=UTC)
-    assert result.end == datetime(2026, 7, 5, 23, 59, tzinfo=UTC)
+    assert result.start == datetime(2026, 7, 1, 0, 0, tzinfo=KST)
+    assert result.end == datetime(2026, 7, 5, 23, 59, tzinfo=KST)
 
 
 def test_extract_location_prefers_raw_location_text() -> None:

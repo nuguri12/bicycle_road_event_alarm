@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -34,6 +35,8 @@ ARA_WATERWAY_LOCATION_KEYWORDS = (
     "굴포천",
     "수향원",
 )
+ARA_FACILITY_PATTERN = re.compile(r"-\(([^)]+)\)")
+MAX_ARA_FACILITY_NAMES = 4
 
 
 # 장소 추출: raw_location_text를 우선하고, 없으면 본문과 제목에서 주요 지명을 찾습니다.
@@ -65,6 +68,13 @@ def extract_location(
         text = " ".join(source_text.split())
         if text == "":
             continue
+        ara_facility_location = _extract_ara_facility_location(text)
+        if ara_facility_location is not None:
+            return ExtractedLocation(
+                location_name=ara_facility_location,
+                region="경기",
+                reason="아라뱃길 친수시설 구간명 감지",
+            )
         region = _detect_region(text)
         if region is not None:
             return ExtractedLocation(
@@ -90,3 +100,23 @@ def _detect_region(text: str) -> str | None:
 
 def _is_ara_waterway_location(text: str) -> bool:
     return any(keyword in text for keyword in ARA_WATERWAY_LOCATION_KEYWORDS)
+
+
+def _extract_ara_facility_location(text: str) -> str | None:
+    if not _is_ara_waterway_location(text):
+        return None
+
+    names: list[str] = []
+    for match in ARA_FACILITY_PATTERN.finditer(text):
+        name = " ".join(match.group(1).split())
+        if name == "" or name in names:
+            continue
+        if _is_ara_waterway_location(name) or "자전거도로" in name:
+            names.append(name)
+
+    if not names:
+        return None
+
+    displayed_names = names[:MAX_ARA_FACILITY_NAMES]
+    suffix = " 등" if len(names) > MAX_ARA_FACILITY_NAMES else ""
+    return f"아라뱃길 친수시설({', '.join(displayed_names)}{suffix})"

@@ -121,6 +121,10 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - Cloudflare schedules API returned `[]`, confirming the 07:45 KST backup cron is still not applied in production.
   - Live source check for `CHECK_KST=2026-08-28 08:10` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=21`, and `PUBLISH_COUNT=2`: Hangang event `evntSn=446` and `evntSn=441`.
   - Current assessment: app/source/Telegram code has not run today; the primary GitHub schedule has either not created a run yet or is severely delayed again. The un-applied Cloudflare backup means there was no independent second trigger at 07:45 KST.
+- 2026-08-28 message quality fix:
+  - The late 2026-08-28 fallback Telegram message correctly selected 3 publish candidates, but Ara Waterway notice `1218` displayed `구간 확인 필요` and all-day events displayed noisy `00:00`/`23:59` times.
+  - Local fix extracts Ara Waterway 친수시설 names from body patterns such as `-(아라마루 전망대)` when `raw_location_text` is missing, classifies compact `통행차단` as high-impact, parses public-source dates as KST, and formats fallback all-day/date-only events as dates instead of artificial midnight times.
+  - Live-source dry-run after the fix produced Ara `1218` as `아라뱃길 친수시설(아라마루 전망대, 아라폭포 철재계단, 굴포천 연결수로 자전거도로, 북측 자전거도로 시천교~계양대교 등) - 2026-08-28`, and Hangang events as `2026-08-01~2026-08-31` / `2026-08-18~2026-09-04`.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
@@ -146,6 +150,8 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 - Normalized saves now prefer updating the existing row for the same `raw_event_id` and remove stale same-raw normalized duplicates before falling back to deterministic duplicate key matching.
 - Message candidate selection treats `publish_candidate=True` as the final alert eligibility contract; high-impact `needs_review` candidates are no longer discarded by a stale `validation_status == "valid"` message query filter.
 - Ara Waterway bridge/section names extracted into `raw_location_text` are preserved as normalized locations with `region=경기`, even when they do not contain the generic 서울/경기 keyword list.
+- Ara Waterway 친수시설 기준 notices can extract facility names from body bullet patterns when `raw_location_text` is missing.
+- Fallback messages render event times in KST and hide artificial all-day midnight ranges.
 
 ## Known Current Observations
 
