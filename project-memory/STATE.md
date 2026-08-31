@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-08-28
+Last updated: 2026-08-31
 
 ## Current Objective
 
@@ -122,11 +122,18 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - Live source check for `CHECK_KST=2026-08-28 08:10` found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=21`, and `PUBLISH_COUNT=2`: Hangang event `evntSn=446` and `evntSn=441`.
   - Current assessment: app/source/Telegram code has not run today; the primary GitHub schedule has either not created a run yet or is severely delayed again. The un-applied Cloudflare backup means there was no independent second trigger at 07:45 KST.
   - Follow-up evidence: Supabase later recorded the production batch at 15:14 KST: ingest run `7ccdda61-e24a-4567-ac93-1aee9572dd6d`, message run `665dba8b-4983-47d2-bd04-ad0d95582960`, and `publish_attempts.status=success`.
-  - Delay assessment: the batch runtime itself was short once it reached the app (`15:14:07` through `15:14:39` KST in DB-visible steps). The delay occurred before the app pipeline started, in the GitHub Actions schedule creation/queueing layer. Local GitHub Actions event/log inspection remains blocked because `gh` is unauthenticated and unauthenticated GitHub API returns 404.
+  - Shared GitHub Actions job log starts at `2026-08-28T06:13:27Z` (15:13:27 KST) with runner version `2.336.0`, checked out commit `e1b9ded`, and ran with `ENABLE_TELEGRAM_PUBLISH=true`, `DRY_RUN=false`, and `FORCE_FALLBACK=true`.
+  - Delay assessment: the batch runtime itself was short once a runner started: runner start to Telegram success was about 72 seconds; ingest took about 21 seconds, normalization about 7 seconds, and message/publish about 5 seconds. The delay occurred before the app pipeline started, in the GitHub Actions schedule delivery/queueing layer. The job log alone does not show `github.event_name`; confirm the run header in GitHub UI to distinguish native `schedule` from a late `workflow_dispatch`.
 - 2026-08-28 message quality fix:
   - The late 2026-08-28 fallback Telegram message correctly selected 3 publish candidates, but Ara Waterway notice `1218` displayed `구간 확인 필요` and all-day events displayed noisy `00:00`/`23:59` times.
   - Local fix extracts Ara Waterway 친수시설 names from body patterns such as `-(아라마루 전망대)` when `raw_location_text` is missing, classifies compact `통행차단` as high-impact, parses public-source dates as KST, and formats fallback all-day/date-only events as dates instead of artificial midnight times.
   - Live-source dry-run after the fix produced Ara `1218` as `아라뱃길 친수시설(아라마루 전망대, 아라폭포 철재계단, 굴포천 연결수로 자전거도로, 북측 자전거도로 시천교~계양대교 등) - 2026-08-28`, and Hangang events as `2026-08-01~2026-08-31` / `2026-08-18~2026-09-04`.
+- 2026-08-30/2026-08-31 Telegram messages not received:
+  - Supabase shows both days did run and reached publish attempt recording.
+  - 2026-08-30 production batch: ingest run `dcee63ad-bddd-495d-8823-72f2bcd3d44e`, message run `d163ecc1-64da-4692-8209-bb5b38c5eafa`, publish attempt `status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=a49388142ae4`.
+  - 2026-08-31 production batch: ingest run `59f336d1-49ad-40af-8ea2-6ec8f804c84b`, message run `29b8c603-2261-447f-a845-005b26f526f8`, publish attempt `status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=a49388142ae4`.
+  - 2026-08-29 publish attempt succeeded with the same `message_hash_prefix=a49388142ae4`; therefore 8/30 and 8/31 did not reach Telegram because `publish_message_once` suppresses any message body that already had a successful publish, regardless of KST delivery date.
+  - Live-source replay for 2026-08-31 07:50 KST found the same two Hangang publish candidates as the 2026-08-29 user-received message: `evntSn=441` and `evntSn=446`. The 8/31 source/message selection is consistent, but the duplicate-send policy conflicts with the product expectation of daily alert delivery.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`

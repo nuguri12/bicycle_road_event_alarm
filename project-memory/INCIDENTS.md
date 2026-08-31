@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-08-28
+Last updated: 2026-08-31
 
 ## Role
 
@@ -22,14 +22,25 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Follow-up:
 ```
 
+## 2026-08-30: Daily messages skipped by historical duplicate hash
+
+- Symptom: The user received the 2026-08-29 Telegram alert but did not receive messages on 2026-08-30 or 2026-08-31.
+- Impact: Daily alert delivery was skipped even though production batches ran.
+- Root cause: `publish_message_once` checks `has_successful_publish(message_hash)` across all history. The 2026-08-30 and 2026-08-31 fallback messages had the same body hash as the successful 2026-08-29 message, so both later publish attempts were skipped with `duplicate_successful_publish`.
+- Evidence: Supabase recorded 2026-08-30 message run `d163ecc1-64da-4692-8209-bb5b38c5eafa` and 2026-08-31 message run `29b8c603-2261-447f-a845-005b26f526f8`; both publish attempts had `status=skipped`, `failure_reason=duplicate_successful_publish`, and `message_hash_prefix=a49388142ae4`. The 2026-08-29 successful publish attempt had the same hash prefix. Live-source replay for 2026-08-31 found the same two Hangang event candidates as the 2026-08-29 user message.
+- Fix: Pending. Duplicate prevention should allow the same alert body on a new KST delivery date while still preventing same-day double sends from GitHub primary plus Cloudflare backup.
+- Verification: Pending after code change.
+- Prevention: Add regression tests for daily duplicate policy: same body on a new KST date should send, same body on the same KST date should skip.
+- Follow-up: Track active remediation in `OPEN_ISSUES.md`.
+
 ## 2026-08-28: GitHub scheduled run absent by 08:10 KST
 
 - Symptom: The expected 2026-08-28 morning Telegram message had not arrived by 08:10 KST.
 - Impact: Two active Hangang event alerts were not published by the normal morning delivery window.
-- Root cause: Localized to the GitHub Actions schedule creation/queueing layer. Supabase had no runtime rows after the 2026-08-27 12:27 KST late delivery at 08:10 KST, live source crawling was healthy, and Cloudflare backup cron was not active. The batch later appeared and finished quickly once app execution started.
-- Evidence: Supabase had zero `run_logs` and zero `publish_attempts` since 2026-08-28 07:00 KST at the 08:10 check. Cloudflare schedules API returned `[]`, confirming the backup cron was still not active. Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`. Supabase later recorded ingest run `7ccdda61-e24a-4567-ac93-1aee9572dd6d`, message run `665dba8b-4983-47d2-bd04-ad0d95582960`, and `publish_attempts.status=success` at 15:14 KST.
+- Root cause: Localized to the GitHub Actions schedule delivery/queueing layer. Supabase had no runtime rows after the 2026-08-27 12:27 KST late delivery at 08:10 KST, live source crawling was healthy, and Cloudflare backup cron was not active. The batch later appeared and finished quickly once a runner started.
+- Evidence: Supabase had zero `run_logs` and zero `publish_attempts` since 2026-08-28 07:00 KST at the 08:10 check. Cloudflare schedules API returned `[]`, confirming the backup cron was still not active. Live source check for `CHECK_KST=2026-08-28 08:10` found no source failures, 21 source candidates, and 2 publish candidates: Hangang event `evntSn=446` and `evntSn=441`. Supabase later recorded ingest run `7ccdda61-e24a-4567-ac93-1aee9572dd6d`, message run `665dba8b-4983-47d2-bd04-ad0d95582960`, and `publish_attempts.status=success` at 15:14 KST. The shared GitHub Actions job log starts at `2026-08-28T06:13:27Z` (15:13:27 KST), checked out commit `e1b9ded`, and ran with `ENABLE_TELEGRAM_PUBLISH=true`, `DRY_RUN=false`, and `FORCE_FALLBACK=true`.
 - Fix: None applied yet during diagnosis. The existing local/repo fix for a Cloudflare backup cron exists, but it has not been applied to Cloudflare production because the current `CLOUDFLARE_API_TOKEN` cannot edit Worker scripts or schedules.
-- Verification: DB and Cloudflare API checks verified no production batch or backup trigger had run by 08:10 KST. DB checks after delivery show the DB-visible app steps ran from `15:14:07` to `15:14:39` KST, so the delay was before the app pipeline started.
+- Verification: DB and Cloudflare API checks verified no production batch or backup trigger had run by 08:10 KST. DB and job-log checks after delivery show about 72 seconds from runner start to `TELEGRAM_STATUS=success`; DB-visible app steps ran from `15:14:07` to `15:14:39` KST, so the delay was before the app pipeline started.
 - Prevention: Complete Cloudflare backup deployment with a Worker-edit-capable credential, or move the primary scheduler to a more reliable external cron once credentialing is fixed.
 - Follow-up: Confirm in GitHub Actions UI whether the 2026-08-28 run event was `Scheduled`, and compare run created/queued time with job started time to distinguish delayed event delivery from Actions queue delay.
 

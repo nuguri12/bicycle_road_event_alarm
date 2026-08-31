@@ -1,8 +1,23 @@
 # Open Issues
 
-Last updated: 2026-08-28
+Last updated: 2026-08-31
 
 ## Operational Risks
+
+### 2026-08-30/2026-08-31 daily messages skipped by duplicate hash
+
+- Symptom: The user reported the last Telegram message was received on 2026-08-29; no Telegram messages were received on 2026-08-30 or 2026-08-31.
+- Verified evidence:
+  - Supabase shows both 2026-08-30 and 2026-08-31 production batches ran successfully through message generation.
+  - 2026-08-30 publish attempt was recorded as `status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=a49388142ae4`.
+  - 2026-08-31 publish attempt was recorded as `status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=a49388142ae4`.
+  - 2026-08-29 publish attempt succeeded with the same `message_hash_prefix=a49388142ae4`.
+  - Live-source replay for 2026-08-31 07:50 KST found 2 publish candidates matching the 2026-08-29 user-received message: Hangang event `evntSn=441` and `evntSn=446`.
+- Current assessment: Source selection is consistent, and the application ran on 8/30 and 8/31. Messages did not arrive because `publish_message_once` suppresses any message body that has already succeeded historically, even when the KST delivery date is different. This duplicate guard is too broad for a daily alert product.
+- Proposed fix:
+  - Scope duplicate suppression to the same KST delivery date, or include the KST delivery date in the hash/dedupe key for scheduled daily messages.
+  - Keep same-day duplicate prevention so GitHub primary plus Cloudflare backup cannot double-send on the same date.
+  - Add regression coverage for same body sent on a new KST date and same body skipped on the same KST date.
 
 ### 2026-08-28 missing daily Telegram message as of 08:10 KST
 
@@ -17,10 +32,12 @@ Last updated: 2026-08-28
 - Follow-up evidence:
   - Supabase later recorded the production batch at 15:14 KST: ingest run `7ccdda61-e24a-4567-ac93-1aee9572dd6d`, message run `665dba8b-4983-47d2-bd04-ad0d95582960`, and `publish_attempts.status=success`.
   - Once DB-visible app steps started, runtime was short: `15:14:07` through `15:14:39` KST.
-  - Current assessment after late delivery: the delay happened before the application pipeline started, at the GitHub Actions native schedule creation/queueing layer. Cloudflare was not a factor because live schedules still returned `[]`.
+  - Shared GitHub Actions job log starts at `2026-08-28T06:13:27Z` (15:13:27 KST), checked out commit `e1b9ded`, and ran with `ENABLE_TELEGRAM_PUBLISH=true`, `DRY_RUN=false`, and `FORCE_FALLBACK=true`.
+  - The job log shows about 72 seconds from runner start to `TELEGRAM_STATUS=success`, including about 21 seconds for ingest, 7 seconds for normalization, and 5 seconds for message/publish.
+  - Current assessment after late delivery: the delay happened before the application pipeline started, at the GitHub Actions schedule delivery/queueing layer. Cloudflare was not a factor because live schedules still returned `[]`.
 - Remaining next check:
   - Confirm in the GitHub Actions UI whether a 2026-08-28 run appears later and whether its event is `Scheduled`.
-  - If the UI shows a 07:30 scheduled event with a much later start time, classify this as GitHub Actions queue delay. If it shows the run was created near 15:14, classify it as schedule event delivery delay.
+  - The shared job log does not include `github.event_name`; confirm the run header in GitHub UI. If the UI shows a 07:30 scheduled event with a much later job start time, classify this as GitHub Actions queue delay. If it shows the run was created near 15:14, classify it as schedule event delivery delay.
   - Apply Cloudflare Worker code and cron config with a Worker-edit-capable Cloudflare credential, then verify schedules include `45 22 * * *`.
   - Consider replacing GitHub native schedule as primary if delayed schedules continue after the backup credential issue is resolved.
 
