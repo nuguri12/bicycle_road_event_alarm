@@ -1,8 +1,21 @@
 # Open Issues
 
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 ## Operational Risks
+
+### 2026-09-01 daily Telegram message missing as of local check
+
+- Symptom: The user reported no Telegram message was received for the 2026-09-01 morning run.
+- Verified evidence:
+  - Supabase has no `run_logs` rows and no `publish_attempts` rows since `2026-08-31 22:00:00+00` (2026-09-01 07:00 KST).
+  - Latest Supabase rows remain the 2026-08-31 production batch at 09:46-09:47 KST, where publishing was skipped by `duplicate_successful_publish`.
+  - Local `gh` is not authenticated, and the unauthenticated GitHub Actions API returned `404 Not Found`, so direct GitHub Actions run inspection is blocked from this environment.
+  - Cloudflare Worker schedules API returned `{"schedules": []}`, confirming the backup cron is still not active in production.
+- Current assessment: The application pipeline has not reached Supabase for the 2026-09-01 run. From local evidence this is a trigger/scheduler-layer issue or a delayed GitHub schedule, not a source crawling, normalization, or Telegram send failure.
+- Remaining next check:
+  - Confirm the GitHub Actions UI or authenticated GitHub API for a 2026-09-01 `Scheduled` run.
+  - If no run appears later, treat this as another missed GitHub native schedule and prioritize the Cloudflare backup cron credential/config fix.
 
 ### 2026-08-30/2026-08-31 daily messages skipped by duplicate hash
 
