@@ -1,8 +1,25 @@
 # Open Issues
 
-Last updated: 2026-09-01
+Last updated: 2026-09-04
 
 ## Operational Risks
+
+### 2026-09-02 through 2026-09-04 Telegram delivery gap
+
+- Symptom: The user reported no Telegram messages after the delayed 2026-09-01 message.
+- Verified evidence:
+  - 2026-09-02 production batch reached Supabase at 09:25 KST and generated an `event_alert`, but `publish_attempts.status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=d88a8df7a8b4`.
+  - 2026-09-03 production batch reached Supabase at 09:31 KST and generated an `event_alert`, but `publish_attempts.status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=d88a8df7a8b4`.
+  - 2026-09-01 publish attempt succeeded with the same `message_hash_prefix=d88a8df7a8b4`, so 9/2 and 9/3 were suppressed by the historical duplicate guard.
+  - As of 2026-09-04 08:16 KST, Supabase had no `run_logs` or `publish_attempts` rows for the 9/4 daily run.
+  - Live-source replay for 2026-09-04 08:16 KST found no source failures, 22 source candidates, and 1 publish candidate: Hangang event `evntSn=446`, active through 2026-09-04.
+  - Cloudflare Worker schedules API still returned `{"schedules": []}`, so the independent 07:45 KST backup trigger remains inactive.
+  - Local `gh` remains unauthenticated, and the unauthenticated GitHub Actions API returned `404 Not Found`, so direct Actions run inspection is still blocked locally.
+- Current assessment: 9/2 and 9/3 were not scheduler misses; they ran and were suppressed by the too-broad duplicate publish policy. 9/4 is currently a scheduler delay/missed-trigger symptom; if a delayed run appears later, it is expected to hit the same duplicate guard unless the daily duplicate policy is fixed first.
+- Proposed fix:
+  - Scope duplicate suppression to the same KST delivery date, or include the KST delivery date in the hash/dedupe key for scheduled daily messages.
+  - Keep same-day duplicate prevention for overlapping GitHub primary and future Cloudflare backup runs.
+  - Restore/apply the Cloudflare backup cron only after the dedupe policy is fixed, otherwise a backup trigger can still be suppressed by the same historical hash.
 
 ### 2026-09-01 daily Telegram message missing as of local check
 

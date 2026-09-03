@@ -138,6 +138,10 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - Initial local check found no Supabase `run_logs` or `publish_attempts` after 2026-09-01 07:00 KST and Cloudflare schedules still returned `[]`.
   - Supabase later recorded ingest run `a0b8508a-e53d-43b9-9a15-8c4e8bc06e09` at 10:21 KST, message run `780222c0-3b6a-4293-80f6-22b5c38f925a` at 10:22 KST, and `publish_attempts.status=success`.
   - Live-source replay for 2026-09-01 found no source failures, 23 source candidates, and 1 publish candidate: Hangang event `evntSn=446`; user-received Telegram text matched the fallback output. Hangang event `evntSn=441` ended on 2026-08-31 and was correctly excluded.
+- 2026-09-02 through 2026-09-04 Telegram delivery gap:
+  - 2026-09-02 and 2026-09-03 production batches reached Supabase and generated `event_alert` messages, but both publish attempts were skipped by `duplicate_successful_publish` with the same `message_hash_prefix=d88a8df7a8b4` as the 2026-09-01 successful publish.
+  - As of 2026-09-04 08:16 KST, Supabase had no 2026-09-04 run rows yet. Live-source replay found no source failures and 1 publish candidate: Hangang event `evntSn=446`, active through 2026-09-04.
+  - Current assessment: fix the daily duplicate policy first; the inactive Cloudflare backup would not solve 9/2 and 9/3 because those runs already reached the publish layer and were intentionally skipped.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
