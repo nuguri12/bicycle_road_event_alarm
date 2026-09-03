@@ -13,9 +13,13 @@ Last updated: 2026-09-01
   - Local `gh` is not authenticated, and the unauthenticated GitHub Actions API returned `404 Not Found`, so direct GitHub Actions run inspection is blocked from this environment.
   - Cloudflare Worker schedules API returned `{"schedules": []}`, confirming the backup cron is still not active in production.
 - Current assessment: The application pipeline has not reached Supabase for the 2026-09-01 run. From local evidence this is a trigger/scheduler-layer issue or a delayed GitHub schedule, not a source crawling, normalization, or Telegram send failure.
+- Follow-up evidence:
+  - Supabase later recorded the 2026-09-01 production batch at 10:21-10:22 KST: ingest run `a0b8508a-e53d-43b9-9a15-8c4e8bc06e09`, message run `780222c0-3b6a-4293-80f6-22b5c38f925a`, and `publish_attempts.status=success`.
+  - Live-source replay for 2026-09-01 found no source failures, 23 source candidates, and 1 publish candidate: Hangang event `evntSn=446` (`‘서울팅 2.0’ ｢설렘 in 서울, 한강버스편｣ 참가자 모집`) active from 2026-08-18 through 2026-09-04.
+  - The user-received Telegram message matches the fallback output for that single publish candidate. Hangang event `evntSn=441` ended on 2026-08-31 and was correctly excluded on 2026-09-01.
 - Remaining next check:
   - Confirm the GitHub Actions UI or authenticated GitHub API for a 2026-09-01 `Scheduled` run.
-  - If no run appears later, treat this as another missed GitHub native schedule and prioritize the Cloudflare backup cron credential/config fix.
+  - If the run header shows `Scheduled`, classify this as another delayed GitHub native schedule and prioritize the Cloudflare backup cron credential/config fix.
 
 ### 2026-08-30/2026-08-31 daily messages skipped by duplicate hash
 

@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 ## Role
 
@@ -21,6 +21,17 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-09-01: GitHub scheduled run delayed, Telegram content matched source
+
+- Symptom: The expected 2026-09-01 morning Telegram message was not received at the normal 07:30 KST window, then later arrived with one Hangang event.
+- Impact: Daily alert delivery was delayed by about 2 hours 50 minutes.
+- Root cause: Localized to the scheduler/Actions layer. At the initial check, Supabase had no `run_logs` or `publish_attempts` rows since 2026-09-01 07:00 KST, and Cloudflare backup schedules still returned `[]`; the app pipeline had not started. The batch later reached Supabase and finished quickly.
+- Evidence: Supabase later recorded ingest run `a0b8508a-e53d-43b9-9a15-8c4e8bc06e09` at 10:21 KST, message run `780222c0-3b6a-4293-80f6-22b5c38f925a` at 10:22 KST, and `publish_attempts.status=success` with hash prefix `d88a8df7a8b4`. Live-source replay for 2026-09-01 found `SOURCE_FAILURES={}`, `SOURCE_CANDIDATE_COUNT=23`, and `PUBLISH_COUNT=1`: Hangang event `evntSn=446`, active from 2026-08-18 through 2026-09-04. The user-received Telegram message matched that single publish candidate; event `evntSn=441` ended on 2026-08-31 and was correctly excluded.
+- Fix: None applied during verification.
+- Verification: DB publish status and live-source fallback replay both matched the user-received message.
+- Prevention: Complete an independent backup trigger or replace the primary scheduler if GitHub native schedule latency continues. Confirm the GitHub Actions run header when authenticated/UI access is available.
+- Follow-up: Track scheduler reliability and Cloudflare backup remediation in `OPEN_ISSUES.md`.
 
 ## 2026-08-30: Daily messages skipped by historical duplicate hash
 

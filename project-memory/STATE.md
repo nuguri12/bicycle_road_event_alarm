@@ -134,6 +134,10 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
   - 2026-08-31 production batch: ingest run `59f336d1-49ad-40af-8ea2-6ec8f804c84b`, message run `29b8c603-2261-447f-a845-005b26f526f8`, publish attempt `status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=a49388142ae4`.
   - 2026-08-29 publish attempt succeeded with the same `message_hash_prefix=a49388142ae4`; therefore 8/30 and 8/31 did not reach Telegram because `publish_message_once` suppresses any message body that already had a successful publish, regardless of KST delivery date.
   - Live-source replay for 2026-08-31 07:50 KST found the same two Hangang publish candidates as the 2026-08-29 user-received message: `evntSn=441` and `evntSn=446`. The 8/31 source/message selection is consistent, but the duplicate-send policy conflicts with the product expectation of daily alert delivery.
+- 2026-09-01 Telegram message arrived late but matched source:
+  - Initial local check found no Supabase `run_logs` or `publish_attempts` after 2026-09-01 07:00 KST and Cloudflare schedules still returned `[]`.
+  - Supabase later recorded ingest run `a0b8508a-e53d-43b9-9a15-8c4e8bc06e09` at 10:21 KST, message run `780222c0-3b6a-4293-80f6-22b5c38f925a` at 10:22 KST, and `publish_attempts.status=success`.
+  - Live-source replay for 2026-09-01 found no source failures, 23 source candidates, and 1 publish candidate: Hangang event `evntSn=446`; user-received Telegram text matched the fallback output. Hangang event `evntSn=441` ended on 2026-08-31 and was correctly excluded.
 - Manual workflow runs default to safe dry-run mode:
   - `dry_run=true`
   - `enable_telegram_publish=false`
