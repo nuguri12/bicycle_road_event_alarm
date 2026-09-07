@@ -1,8 +1,23 @@
 # Open Issues
 
-Last updated: 2026-09-04
+Last updated: 2026-09-08
 
 ## Operational Risks
+
+### 2026-09-07 through 2026-09-08 Telegram delivery gap
+
+- Symptom: The user reported no special Telegram messages after the 2026-09-06 message for Hangang event `evntSn=451`.
+- Verified evidence:
+  - 2026-09-06 production batch reached Supabase at 09:07-09:08 KST and published successfully with `message_hash_prefix=912d6d6647c5`.
+  - 2026-09-07 production batch reached Supabase at 09:12 KST and generated an `event_alert`, but `publish_attempts.status=skipped`, `failure_reason=duplicate_successful_publish`, `message_hash_prefix=912d6d6647c5`.
+  - As of 2026-09-08 08:29 KST, Supabase had no 2026-09-08 `run_logs` or `publish_attempts` rows.
+  - Live-source replay for 2026-09-08 08:29 KST found no source failures, 19 source candidates, and 1 publish candidate: Hangang event `evntSn=451`, active from 2026-09-06 through 2026-10-25.
+  - Cloudflare Worker schedules API still returned `{"schedules": []}`, so the independent backup trigger remains inactive.
+  - Local `gh` remains unauthenticated, and the unauthenticated GitHub Actions API returned `404 Not Found`, so direct Actions run inspection is blocked locally.
+- Current assessment: The 2026-09-07 missing Telegram message is a duplicate-policy skip, not a source or scheduler failure. The 2026-09-08 missing Telegram message is currently a scheduler delay/missed-trigger symptom; if it runs later, it is expected to hit the same duplicate guard while `evntSn=451` remains the only active publish candidate.
+- Proposed fix:
+  - Fix daily duplicate suppression first so the same daily alert body can be sent on a new KST date while still skipping same-day duplicates.
+  - Re-enable/apply an independent backup scheduler only after the dedupe policy is date-scoped, otherwise backup runs can still be suppressed by the historical hash.
 
 ### 2026-09-02 through 2026-09-04 Telegram delivery gap
 

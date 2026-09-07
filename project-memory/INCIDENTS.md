@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-09-04
+Last updated: 2026-09-08
 
 ## Role
 
@@ -38,7 +38,7 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Symptom: The user received the 2026-08-29 Telegram alert but did not receive messages on 2026-08-30 or 2026-08-31.
 - Impact: Daily alert delivery was skipped even though production batches ran.
 - Root cause: `publish_message_once` checks `has_successful_publish(message_hash)` across all history. The 2026-08-30 and 2026-08-31 fallback messages had the same body hash as the successful 2026-08-29 message, so both later publish attempts were skipped with `duplicate_successful_publish`.
-- Evidence: Supabase recorded 2026-08-30 message run `d163ecc1-64da-4692-8209-bb5b38c5eafa` and 2026-08-31 message run `29b8c603-2261-447f-a845-005b26f526f8`; both publish attempts had `status=skipped`, `failure_reason=duplicate_successful_publish`, and `message_hash_prefix=a49388142ae4`. The 2026-08-29 successful publish attempt had the same hash prefix. Live-source replay for 2026-08-31 found the same two Hangang event candidates as the 2026-08-29 user message. The same pattern recurred on 2026-09-02 and 2026-09-03: both batches generated `event_alert` messages, both publish attempts were skipped with `duplicate_successful_publish`, and both shared the 2026-09-01 success hash prefix `d88a8df7a8b4`.
+- Evidence: Supabase recorded 2026-08-30 message run `d163ecc1-64da-4692-8209-bb5b38c5eafa` and 2026-08-31 message run `29b8c603-2261-447f-a845-005b26f526f8`; both publish attempts had `status=skipped`, `failure_reason=duplicate_successful_publish`, and `message_hash_prefix=a49388142ae4`. The 2026-08-29 successful publish attempt had the same hash prefix. Live-source replay for 2026-08-31 found the same two Hangang event candidates as the 2026-08-29 user message. The same pattern recurred on 2026-09-02 and 2026-09-03: both batches generated `event_alert` messages, both publish attempts were skipped with `duplicate_successful_publish`, and both shared the 2026-09-01 success hash prefix `d88a8df7a8b4`. It recurred again on 2026-09-07: the batch generated an `event_alert`, but publish was skipped with the 2026-09-06 success hash prefix `912d6d6647c5`.
 - Fix: Pending. Duplicate prevention should allow the same alert body on a new KST delivery date while still preventing same-day double sends from GitHub primary plus Cloudflare backup.
 - Verification: Pending after code change.
 - Prevention: Add regression tests for daily duplicate policy: same body on a new KST date should send, same body on the same KST date should skip.
