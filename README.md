@@ -82,7 +82,7 @@
 
 ### 자동화와 외부 서비스
 
-- Cloudflare Workers Cron: 매일 07:30 KST 운영 트리거
+- GitHub Actions native schedule: 매일 02:00 KST 운영 트리거
 - GitHub Actions: 수집, 정규화, 메시지 생성, 발송 배치 실행
 - Supabase: 실행 로그와 이벤트 저장
 - OpenAI API: 사용자용 알림 문장 생성
@@ -141,13 +141,15 @@ python -m bicycle_road_event_alarm.cli.generate_messages --run-id "<RUN_ID>" --f
 현재 운영 스케줄:
 
 ```text
-GitHub Actions schedule: 30 22 * * *
+GitHub Actions schedule: 0 17 * * *
 ```
 
 Production scheduling is owned by GitHub Actions native `schedule`.
 Cloudflare Worker cron is disabled and kept only for diagnostics.
 
-Cloudflare cron은 UTC 기준입니다. 따라서 `30 22 * * *`는 한국 시간 기준 매일 07:30 실행입니다.
+GitHub Actions cron은 UTC 기준입니다. 따라서 `0 17 * * *`는 한국 시간 기준 매일 02:00 실행입니다.
+
+Cloudflare 백업 cron은 현재 비활성 상태입니다. 재활성화 시 로컬 설정의 `15 17 * * *`를 사용해 02:15 KST에 실행하도록 맞춰 두었습니다.
 
 Cloudflare Worker는 GitHub Actions `Manual Batch` workflow를 `workflow_dispatch`로 호출합니다. 운영 호출은 실제 발송 모드입니다.
 

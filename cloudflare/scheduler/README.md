@@ -13,14 +13,15 @@ https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev
 
 ## Schedule
 
-Cloudflare cron is enabled as a backup trigger at 07:45 KST.
+Cloudflare cron is prepared as a backup trigger at 02:15 KST. It is currently
+not applied in production.
 
 ```toml
-crons = ["45 22 * * *"]
+crons = ["15 17 * * *"]
 ```
 
-The production GitHub Actions schedule is `30 22 * * *`, which runs every day at
-07:30 KST. Both paths use deterministic fallback message generation so the
+The production GitHub Actions schedule is `0 17 * * *`, which runs every day at
+02:00 KST. Both paths use deterministic fallback message generation so the
 existing successful-message hash guard can skip duplicate sends if both triggers
 run on the same day.
 
@@ -84,7 +85,7 @@ The Worker dispatches `.github/workflows/manual-batch.yml` on `main` with:
 After deployment:
 
 1. In Cloudflare, open the Worker.
-2. Confirm Cron Triggers include `45 22 * * *`.
+2. Confirm Cron Triggers include `15 17 * * *`.
 3. Confirm GitHub Actions still owns the primary daily `schedule` run.
 4. Confirm the run logs include `TELEGRAM_STATUS=success`.
 

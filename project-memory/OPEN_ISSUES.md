@@ -1,8 +1,22 @@
 # Open Issues
 
-Last updated: 2026-09-08
+Last updated: 2026-09-19
 
 ## Operational Risks
+
+### 2026-09-16 through 2026-09-19 delayed and skipped Telegram delivery
+
+- Symptom: The user reported no Telegram delivery after 2026-09-16.
+- Verified evidence:
+  - Scheduled ingest and message runs completed daily on 2026-09-16 through 2026-09-19, but their starts were delayed to 09:30-09:48 KST rather than the prior 07:30 KST target.
+  - The 2026-09-16 publish attempt succeeded at 09:40 KST with `message_hash_prefix=8aea6c3d9916`.
+  - The 2026-09-17, 2026-09-18, and 2026-09-19 attempts each generated `event_alert` but were skipped with `failure_reason=duplicate_successful_publish` and the same hash prefix.
+- Current assessment: GitHub Actions schedule delay harms timeliness, but the immediate no-message cause after 9/16 is the existing global message-hash dedupe defect, not source crawling or Telegram API failure.
+- Mitigation applied: The primary GitHub Actions cron is now `0 17 * * *` (02:00 KST); the inactive local Cloudflare backup config is aligned to `15 17 * * *` (02:15 KST). This creates a larger recovery window before the morning riding period.
+- Remaining work:
+  - Implement KST-date-scoped duplicate prevention before the next repeated alert is expected.
+  - Measure the next several actual runner start times; GitHub Actions schedule remains best-effort.
+  - Do not activate the Cloudflare backup until its credential issue and date-scoped dedupe are both resolved.
 
 ### 2026-09-07 through 2026-09-08 Telegram delivery gap
 

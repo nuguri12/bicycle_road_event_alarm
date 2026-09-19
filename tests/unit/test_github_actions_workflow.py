@@ -10,7 +10,7 @@ def test_manual_batch_workflow_exists_with_safe_defaults() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "schedule:" in workflow
-    assert 'cron: "30 22 * * *"' in workflow
+    assert 'cron: "0 17 * * *"' in workflow
     assert "concurrency:" in workflow
     assert "group: manual-batch-${{ github.ref }}" in workflow
     assert "cancel-in-progress: false" in workflow

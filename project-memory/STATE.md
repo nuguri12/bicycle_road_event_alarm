@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-09-08
+Last updated: 2026-09-19
 
 ## Current Objective
 
@@ -24,9 +24,10 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 - Cloudflare Worker: `bicycle-road-event-alarm-scheduler`
 - Cloudflare Worker URL: `https://bicycle-road-event-alarm-scheduler.matthew-dev.workers.dev`
 - Latest Cloudflare deployment version: `9b671e08-dcce-4cdb-9d6e-ec0c29393f68`
-- Production schedule: GitHub Actions native schedule `30 22 * * *`
-- Meaning: every day 07:30 KST
-- Cloudflare cron trigger should be re-enabled as a backup at `45 22 * * *` (07:45 KST), but applying the setting through the current `.env` `CLOUDFLARE_API_TOKEN` is blocked by Cloudflare API `403 Authentication error`.
+- Production schedule: GitHub Actions native schedule `0 17 * * *`
+- Meaning: every day 02:00 KST
+- Cloudflare cron trigger is prepared as a backup at `15 17 * * *` (02:15 KST), but it remains inactive because applying the setting through the current `.env` `CLOUDFLARE_API_TOKEN` is blocked by Cloudflare API `403 Authentication error`.
+- The earlier trigger was selected after 2026-09-16 through 2026-09-19 scheduled batches began around 09:30-09:48 KST; it provides recovery margin but does not make GitHub Actions scheduling precise.
 - Cloudflare Worker secret `GITHUB_TOKEN` is set as of 2026-07-04 09:20 KST (`npx wrangler secret list` returned `GITHUB_TOKEN`).
 - Cloudflare Worker secret `SMOKE_TRIGGER_TOKEN` is set for authenticated manual production smoke runs.
 - GitHub Actions native `schedule` is restored as the production trigger.
@@ -279,9 +280,9 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 
 ## Next Actions
 
-1. Continue light monitoring of daily 07:30 KST production runs.
+1. Monitor the daily 02:00 KST production run and its delivery time for several days; GitHub Actions scheduling remains best-effort.
 2. Verify the restored GitHub Actions native daily schedule:
-   - Confirm a 2026-08-24 07:30 KST `schedule` run is created.
+   - Confirm the next 02:00 KST `schedule` run is created and its actual runner-start delay is recorded.
    - Confirm `DRY_RUN=false`, `ENABLE_TELEGRAM_PUBLISH=true`, Supabase ingest, message generation, and Telegram publish complete.
    - Keep Cloudflare cron disabled while GitHub schedule owns production.
    - Keep Cloudflare Worker only as a diagnostic path until its `GITHUB_TOKEN` issue is separately resolved.
@@ -297,4 +298,4 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 6. Build a minimal web/admin surface only after Telegram personal delivery works.
 7. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
 8. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-9. Revisit no-event message dedupe only if daily no-event confirmations become noisy.
+9. Fix the active date-scoped message dedupe defect before enabling the Cloudflare backup, so a repeated event alert can publish on each new KST date.

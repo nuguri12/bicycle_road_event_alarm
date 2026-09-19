@@ -1,6 +1,6 @@
 # Decisions
 
-Last updated: 2026-07-19
+Last updated: 2026-09-19
 
 ## 2026-07-19: Treat `publish_candidate=True` as the final message eligibility contract
 
@@ -106,6 +106,13 @@ Last updated: 2026-07-19
 - Reason: The 2026-08-23 07:30 KST message was missing. A fresh smoke-protected Worker diagnostic reached the Worker, but GitHub workflow lookup returned HTTP 400 and safe dry-run dispatch returned HTTP 500, confirming the Cloudflare-to-GitHub dispatch path is still broken before the application batch starts.
 - Alternatives considered: Keep retrying Cloudflare `GITHUB_TOKEN` registration; add more Worker token parsing; wait for another natural run; switch to a GitHub App.
 - Impact: GitHub Actions owns the daily 07:30 KST trigger again. Cloudflare Worker remains available for diagnostics, but its cron is disabled to avoid duplicate sends if its token issue is fixed later.
+
+## 2026-09-19: Move daily trigger earlier to 02:00 KST
+
+- Decision: Set the GitHub Actions production cron to `0 17 * * *` (02:00 KST) and prepare the inactive Cloudflare backup cron at `15 17 * * *` (02:15 KST).
+- Reason: Recent GitHub Actions scheduled runs started roughly two hours after the requested 07:30 KST trigger, so morning delivery was no longer timely. An earlier requested trigger leaves recovery time before the usual riding window.
+- Alternatives considered: Keep the 07:30 KST trigger; use the unavailable Cloudflare backup as the primary trigger; manually dispatch each delayed run.
+- Impact: The scheduled batch can begin before the morning update window even when GitHub Actions is delayed. GitHub scheduling is still best-effort, and the Cloudflare backup remains inactive until a Worker-edit-capable credential applies it.
 
 ## 2026-07-03: 17:30 KST smoke did not create a schedule run
 

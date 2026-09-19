@@ -1,6 +1,6 @@
 # Codex Handoff Current Status
 
-Last updated: 2026-07-28
+Last updated: 2026-09-19
 
 ## Purpose
 
@@ -13,6 +13,10 @@ This document is the handoff note for another local Codex session. It summarizes
 - Branch strategy: the user approved direct development on `main`
 - Latest runtime fixes in project memory: psycopg prepared statements are disabled for Supabase Transaction Pooler compatibility; Ara Waterway parsing/location precision, message-stage run correlation, the 2026-07-10 formatting-gate recovery, the 2026-07-19 Ara Waterway false no-event fixes, and the 2026-07-21 same-raw normalized dedupe fix are documented.
 - Check `git status --short` before editing.
+
+## Current Schedule Override
+
+This handoff contains historical 07:30 KST operational evidence below. The current production schedule supersedes that history: GitHub Actions runs daily at `0 17 * * *` (02:00 KST). The locally prepared but inactive Cloudflare backup is `15 17 * * *` (02:15 KST). See `project-memory/STATE.md` and `project-memory/DECISIONS.md` for the current operational state.
 
 ## Project Goal
 
