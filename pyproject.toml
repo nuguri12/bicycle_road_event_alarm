@@ -15,13 +15,13 @@ dependencies = [
   "psycopg[binary]>=3.2",
   "python-dotenv>=1.0",
   "requests>=2.32",
-  "sqlalchemy>=2.0",
+  "sqlalchemy>=2.0,<2.1",
 ]
 
 [project.optional-dependencies]
 dev = [
   "black>=24.0",
-  "mypy>=1.10",
+  "mypy>=1.10,<2",
   "pytest>=8.0",
   "ruff>=0.5",
   "types-requests>=2.32",

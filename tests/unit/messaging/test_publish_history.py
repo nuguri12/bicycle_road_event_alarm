@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from unittest.mock import Mock
 
 from bicycle_road_event_alarm.messaging.publish_history import (
@@ -12,11 +13,19 @@ from bicycle_road_event_alarm.messaging.telegram_publisher import TelegramPublis
 
 
 def test_build_message_hash_is_stable_for_same_message_text() -> None:
-    first_hash = build_message_hash("주의 구간 안내\n원문: https://example.test/1")
-    second_hash = build_message_hash("주의 구간 안내\n원문: https://example.test/1")
+    message = "주의 구간 안내\n원문: https://example.test/1"
+    first_hash = build_message_hash(message, on_date=date(2026, 10, 24))
+    second_hash = build_message_hash(message, on_date=date(2026, 10, 24))
 
     assert first_hash == second_hash
     assert len(first_hash) == 64
+
+
+def test_build_message_hash_allows_same_alert_on_next_kst_date() -> None:
+    first_hash = build_message_hash("주의 구간 안내", on_date=date(2026, 10, 24))
+    next_day_hash = build_message_hash("주의 구간 안내", on_date=date(2026, 10, 25))
+
+    assert first_hash != next_day_hash
 
 
 def test_has_successful_publish_checks_success_status_for_message_hash() -> None:

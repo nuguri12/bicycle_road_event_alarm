@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-09-19
+Last updated: 2026-10-24
 
 ## Current Objective
 
@@ -13,6 +13,8 @@ MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-ev
 Current investigation: Daily Telegram delivery through Cloudflare was broken from 2026-08-04 through 2026-08-23, so production scheduling was moved back to GitHub Actions native `schedule` and Cloudflare cron was disabled. The restored GitHub schedule created a 2026-08-24 07:48 KST ingest run and a 07:50 KST message run; Telegram publish was recorded as `success`, but the user received a no-event message while full live-source crawling for the same 2026-08-24 07:50 KST 기준 found 2 Hangang publish candidates. Root cause: the production GitHub runner timed out on Hangang event and notice sources, so the message was generated from Ara Waterway only and recorded `message_context=partial_source_unavailable`. Local fix now renders empty `partial_source_unavailable` fallback as a degraded-source warning instead of a plain no-event confirmation.
 
 ## Current Runtime State
+
+- 2026-10-24: Supabase PostgreSQL was reactivated. Local dry-run successfully ingested all three sources, normalized 21 current observations, and generated a five-event fallback alert without Telegram delivery. The daily duplicate-hash fix now scopes hashes to the KST send date; local tests pass, but production delivery after deployment remains unverified. GitHub `schedule` still creates daily runs, but the latest ten failed at CI mypy before ingestion after unconstrained mypy 2.4 and SQLAlchemy 2.1 were installed; compatible dependency ranges are now set in `pyproject.toml` pending remote verification.
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`

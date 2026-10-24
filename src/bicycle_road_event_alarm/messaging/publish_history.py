@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,8 +13,10 @@ from bicycle_road_event_alarm.messaging.telegram_publisher import TelegramPublis
 
 
 # 메시지 해시: 같은 본문은 같은 값으로 계산해 중복 발송 여부를 판단합니다.
-def build_message_hash(message: str) -> str:
-    return hashlib.sha256(message.strip().encode("utf-8")).hexdigest()
+def build_message_hash(message: str, *, on_date: date | None = None) -> str:
+    publish_date = on_date or datetime.now(ZoneInfo("Asia/Seoul")).date()
+    dated_message = f"{publish_date.isoformat()}\n{message.strip()}"
+    return hashlib.sha256(dated_message.encode()).hexdigest()
 
 
 # 성공 이력 조회: 같은 message_hash가 이미 success면 다시 발송하지 않습니다.

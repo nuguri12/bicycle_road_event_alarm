@@ -1,8 +1,14 @@
 # Open Issues
 
-Last updated: 2026-09-19
+Last updated: 2026-10-24
 
 ## Operational Risks
+
+### 2026-10-24 scheduled runs fail before ingestion
+
+- The latest ten GitHub `schedule` runs were created, but each concluded `failure`. Run `40017405632` stopped at `Run Mypy`; ingest and Telegram steps were skipped.
+- The runner installed mypy 2.4.0 and SQLAlchemy 2.1.6 from unconstrained dependency ranges. Mypy reported two type errors in `messaging/repository.py` that were absent locally with mypy 1.20.2 and SQLAlchemy 2.0.48.
+- `pyproject.toml` now limits those dependencies to the locally verified major/minor lines. Verify the first remote run after deployment passes all gates and reaches the batch steps.
 
 ### 2026-09-16 through 2026-09-19 delayed and skipped Telegram delivery
 
@@ -14,7 +20,7 @@ Last updated: 2026-09-19
 - Current assessment: GitHub Actions schedule delay harms timeliness, but the immediate no-message cause after 9/16 is the existing global message-hash dedupe defect, not source crawling or Telegram API failure.
 - Mitigation applied: The primary GitHub Actions cron is now `0 17 * * *` (02:00 KST); the inactive local Cloudflare backup config is aligned to `15 17 * * *` (02:15 KST). This creates a larger recovery window before the morning riding period.
 - Remaining work:
-  - Implement KST-date-scoped duplicate prevention before the next repeated alert is expected.
+  - KST-date-scoped hashing was implemented locally on 2026-10-24; verify it on a natural production run after deployment.
   - Measure the next several actual runner start times; GitHub Actions schedule remains best-effort.
   - Do not activate the Cloudflare backup until its credential issue and date-scoped dedupe are both resolved.
 
