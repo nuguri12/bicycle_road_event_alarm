@@ -8,11 +8,11 @@ Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions sch
 
 ## Active Task
 
-The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed duplicate prevention to use the KST send date. A GitHub Actions manual dry-run `40086638543` passed all checks and batch steps, generating a five-event alert with Telegram intentionally disabled. Verify the next natural 02:00 KST scheduled run and actual Telegram delivery. Cloudflare backup remains inactive pending its credential repair.
+The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed duplicate prevention to use the KST send date. GitHub Actions manual dry-run `40086638543` passed all checks and batch steps. A subsequent real-publish run `40087073647` generated a five-event alert and returned `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=59`; Supabase recorded one successful publish. Verify the next natural 02:00 KST scheduled run. Cloudflare backup remains inactive pending its credential repair.
 
 ## Current Runtime State
 
-- 2026-10-24: Supabase PostgreSQL was reactivated. Local dry-run covered all three sources and generated a five-event alert without Telegram delivery. The first remote dry-run on commit `dcc009d` passed CI, ingest, normalization, and message generation; Supabase ingest run `3722d5cc-fbac-4f02-9585-927f7206dab4` and its message run succeeded, with `publish_attempts.status=skipped` and `failure_reason=telegram_publish_disabled`. Natural scheduled delivery after recovery remains unverified.
+- 2026-10-24: Supabase PostgreSQL was reactivated. Local and GitHub dry-runs succeeded. Real-publish GitHub run `40087073647` passed CI, ingest, normalization, and message generation. It returned Telegram message ID `59`; Supabase message run `2ff02f43-d371-4dcf-8da0-c023b3061138` recorded `published_message_count=1` and `publish_attempts.status=success` for ingest run `d1dd3d24-41e4-4880-bf41-6d26fa77b846`. Natural scheduled delivery after recovery remains unverified.
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`

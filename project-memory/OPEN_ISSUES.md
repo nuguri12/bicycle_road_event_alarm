@@ -6,7 +6,7 @@ Last updated: 2026-10-24
 
 ### 2026-10-24 natural delivery after recovery not yet verified
 
-- GitHub manual dry-run `40086638543` completed on recovery commit `dcc009d`: all CI gates and batch steps passed, generated an alert with five candidates, and intentionally skipped Telegram.
+- GitHub manual dry-run `40086638543` completed on recovery commit `dcc009d`: all CI gates and batch steps passed, generated an alert with five candidates, and intentionally skipped Telegram. Real-publish manual run `40087073647` then returned Telegram message ID `59` and Supabase `publish_attempts.status=success`.
 - Confirm the next natural `schedule` run passes and records a real `publish_attempts.status=success`, then compare the received Telegram message with its source candidates.
 
 ### 2026-09-16 through 2026-09-19 delayed and skipped Telegram delivery
