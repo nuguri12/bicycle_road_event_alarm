@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-09-08
+Last updated: 2026-10-24
 
 ## Role
 
@@ -22,6 +22,16 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Follow-up:
 ```
 
+## 2026-10-24: Scheduled batches stopped at mypy before ingestion
+
+- Symptom: Ten consecutive GitHub `schedule` runs completed with failure; no ingest or Telegram step started. Run `40017405632` failed at `Run Mypy`.
+- Impact: Daily Telegram alerts were not delivered during those runs.
+- Root cause: Unbounded dependency ranges installed mypy 2.4.0 and SQLAlchemy 2.1.6 on GitHub, whose typing combination rejected two query annotations in `messaging/repository.py`. The locally installed mypy 1.20.2 and SQLAlchemy 2.0.48 passed.
+- Fix: Bound mypy to `<2` and SQLAlchemy to `<2.1` in `pyproject.toml`; commit `dcc009d` also scopes duplicate hashes to the KST send date.
+- Verification: GitHub manual dry-run `40086638543` passed tests, Ruff, mypy, Black, compilation, ingest, normalization, and message generation. Supabase recorded the matching successful run with Telegram intentionally skipped.
+- Prevention: Keep CI dependency ranges within tested versions and verify a remote dry-run after changes to CI or dependencies.
+- Follow-up: Confirm natural scheduled Telegram delivery in `OPEN_ISSUES.md`.
+
 ## 2026-09-01: GitHub scheduled run delayed, Telegram content matched source
 
 - Symptom: The expected 2026-09-01 morning Telegram message was not received at the normal 07:30 KST window, then later arrived with one Hangang event.
@@ -39,10 +49,10 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Impact: Daily alert delivery was skipped even though production batches ran.
 - Root cause: `publish_message_once` checks `has_successful_publish(message_hash)` across all history. The 2026-08-30 and 2026-08-31 fallback messages had the same body hash as the successful 2026-08-29 message, so both later publish attempts were skipped with `duplicate_successful_publish`.
 - Evidence: Supabase recorded 2026-08-30 message run `d163ecc1-64da-4692-8209-bb5b38c5eafa` and 2026-08-31 message run `29b8c603-2261-447f-a845-005b26f526f8`; both publish attempts had `status=skipped`, `failure_reason=duplicate_successful_publish`, and `message_hash_prefix=a49388142ae4`. The 2026-08-29 successful publish attempt had the same hash prefix. Live-source replay for 2026-08-31 found the same two Hangang event candidates as the 2026-08-29 user message. The same pattern recurred on 2026-09-02 and 2026-09-03: both batches generated `event_alert` messages, both publish attempts were skipped with `duplicate_successful_publish`, and both shared the 2026-09-01 success hash prefix `d88a8df7a8b4`. It recurred on 2026-09-07 with the 2026-09-06 success hash prefix `912d6d6647c5`, and again on 2026-09-17 through 2026-09-19 with the 2026-09-16 success hash prefix `8aea6c3d9916`.
-- Fix: Pending. Duplicate prevention should allow the same alert body on a new KST delivery date while still preventing same-day double sends from GitHub primary plus Cloudflare backup.
-- Verification: Pending after code change.
+- Fix: Commit `dcc009d` includes the KST send date in the message hash while keeping the existing unique-success index for same-day duplicate prevention.
+- Verification: Regression tests and remote dry-run `40086638543` passed; actual next-day Telegram delivery remains unverified.
 - Prevention: Add regression tests for daily duplicate policy: same body on a new KST date should send, same body on the same KST date should skip.
-- Follow-up: Track active remediation in `OPEN_ISSUES.md`.
+- Follow-up: Verify a natural scheduled alert reaches Telegram; track in `OPEN_ISSUES.md`.
 
 ## 2026-08-28: GitHub scheduled run absent by 08:10 KST
 

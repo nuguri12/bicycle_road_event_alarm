@@ -4,17 +4,15 @@ Last updated: 2026-10-24
 
 ## Current Objective
 
-Operate and verify the Daily Cycling Event Alert Service as a Cloudflare-triggered GitHub Actions batch that collects bicycle-impacting public events, normalizes same-day active events, generates a Korean Telegram message, and publishes to a private Telegram channel.
+Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions scheduled batch that collects bicycle-impacting public events, normalizes same-day active events, generates a Korean Telegram message, and publishes to a private Telegram channel.
 
 ## Active Task
 
-MVP daily triggering remains stable. The 2026-07-28 user-received Telegram no-event message was cross-checked against live source crawling and Supabase records, and matched `PUBLISH_COUNT=0` with the latest Ara Waterway notice `1217` row marked `[개방완료]` and `publish_candidate=False`. Continue light monitoring before expanding sources, adding Telegram subscription flows, or evaluating Hermes Agent message generation.
-
-Current investigation: Daily Telegram delivery through Cloudflare was broken from 2026-08-04 through 2026-08-23, so production scheduling was moved back to GitHub Actions native `schedule` and Cloudflare cron was disabled. The restored GitHub schedule created a 2026-08-24 07:48 KST ingest run and a 07:50 KST message run; Telegram publish was recorded as `success`, but the user received a no-event message while full live-source crawling for the same 2026-08-24 07:50 KST 기준 found 2 Hangang publish candidates. Root cause: the production GitHub runner timed out on Hangang event and notice sources, so the message was generated from Ara Waterway only and recorded `message_context=partial_source_unavailable`. Local fix now renders empty `partial_source_unavailable` fallback as a degraded-source warning instead of a plain no-event confirmation.
+The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed duplicate prevention to use the KST send date. A GitHub Actions manual dry-run `40086638543` passed all checks and batch steps, generating a five-event alert with Telegram intentionally disabled. Verify the next natural 02:00 KST scheduled run and actual Telegram delivery. Cloudflare backup remains inactive pending its credential repair.
 
 ## Current Runtime State
 
-- 2026-10-24: Supabase PostgreSQL was reactivated. Local dry-run successfully ingested all three sources, normalized 21 current observations, and generated a five-event fallback alert without Telegram delivery. The daily duplicate-hash fix now scopes hashes to the KST send date; local tests pass, but production delivery after deployment remains unverified. GitHub `schedule` still creates daily runs, but the latest ten failed at CI mypy before ingestion after unconstrained mypy 2.4 and SQLAlchemy 2.1 were installed; compatible dependency ranges are now set in `pyproject.toml` pending remote verification.
+- 2026-10-24: Supabase PostgreSQL was reactivated. Local dry-run covered all three sources and generated a five-event alert without Telegram delivery. The first remote dry-run on commit `dcc009d` passed CI, ingest, normalization, and message generation; Supabase ingest run `3722d5cc-fbac-4f02-9585-927f7206dab4` and its message run succeeded, with `publish_attempts.status=skipped` and `failure_reason=telegram_publish_disabled`. Natural scheduled delivery after recovery remains unverified.
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
 - Branch strategy: direct development on `main`
@@ -300,4 +298,4 @@ Current investigation: Daily Telegram delivery through Cloudflare was broken fro
 6. Build a minimal web/admin surface only after Telegram personal delivery works.
 7. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
 8. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-9. Fix the active date-scoped message dedupe defect before enabling the Cloudflare backup, so a repeated event alert can publish on each new KST date.
+9. Verify the KST-date-scoped dedupe fix with natural production delivery before enabling the Cloudflare backup.

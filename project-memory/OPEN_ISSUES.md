@@ -4,11 +4,10 @@ Last updated: 2026-10-24
 
 ## Operational Risks
 
-### 2026-10-24 scheduled runs fail before ingestion
+### 2026-10-24 natural delivery after recovery not yet verified
 
-- The latest ten GitHub `schedule` runs were created, but each concluded `failure`. Run `40017405632` stopped at `Run Mypy`; ingest and Telegram steps were skipped.
-- The runner installed mypy 2.4.0 and SQLAlchemy 2.1.6 from unconstrained dependency ranges. Mypy reported two type errors in `messaging/repository.py` that were absent locally with mypy 1.20.2 and SQLAlchemy 2.0.48.
-- `pyproject.toml` now limits those dependencies to the locally verified major/minor lines. Verify the first remote run after deployment passes all gates and reaches the batch steps.
+- GitHub manual dry-run `40086638543` completed on recovery commit `dcc009d`: all CI gates and batch steps passed, generated an alert with five candidates, and intentionally skipped Telegram.
+- Confirm the next natural `schedule` run passes and records a real `publish_attempts.status=success`, then compare the received Telegram message with its source candidates.
 
 ### 2026-09-16 through 2026-09-19 delayed and skipped Telegram delivery
 
