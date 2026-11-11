@@ -1,13 +1,22 @@
 # Open Issues
 
-Last updated: 2026-10-24
+Last updated: 2026-11-11
 
 ## Operational Risks
 
-### 2026-10-24 natural delivery after recovery not yet verified
+### 2026-10-29 and 2026-11-11 scheduled runs started late
 
-- GitHub manual dry-run `40086638543` completed on recovery commit `dcc009d`: all CI gates and batch steps passed, generated an alert with five candidates, and intentionally skipped Telegram. Real-publish manual run `40087073647` then returned Telegram message ID `59` and Supabase `publish_attempts.status=success`.
-- Confirm the next natural `schedule` run passes and records a real `publish_attempts.status=success`, then compare the received Telegram message with its source candidates.
+- Expected schedule: daily at 02:00 KST (`0 17 * * *`).
+- Verified evidence:
+  - 2026-10-29 ingest started at 06:31 KST; Telegram publish succeeded at 06:32 KST.
+  - 2026-11-11 ingest started at 07:09:54 KST and Telegram publish succeeded at 07:10:22 KST.
+  - The 2026-11-11 run completed source collection, normalization, message generation, and Telegram publishing. Among 17 raw rows, exactly one was publishable: Hangang event `evntSn=485`.
+  - The regenerated fallback body hash matched the successful KST-date-scoped publish record, and every user-visible field matched the ingested official source.
+- Current assessment: The production data and publish path are functioning, but actual run start remains over four hours later than the configured cron. Supabase run timestamps do not reveal whether GitHub created the schedule event late or runner allocation was queued.
+- Follow-up:
+  - Inspect GitHub Actions event creation, queued, and runner-start timestamps for several scheduled runs to localize the delay.
+  - Cloudflare backup remains inactive; the local 02:15 KST config needs to be applied with a token that can edit Worker scripts and Cron Triggers.
+  - Before enabling both triggers, confirm same-day duplicate suppression with overlapping scheduled runs; KST-date-scoped hashing is deployed in commit `dcc009d`.
 
 ### 2026-09-16 through 2026-09-19 delayed and skipped Telegram delivery
 
@@ -16,10 +25,11 @@ Last updated: 2026-10-24
   - Scheduled ingest and message runs completed daily on 2026-09-16 through 2026-09-19, but their starts were delayed to 09:30-09:48 KST rather than the prior 07:30 KST target.
   - The 2026-09-16 publish attempt succeeded at 09:40 KST with `message_hash_prefix=8aea6c3d9916`.
   - The 2026-09-17, 2026-09-18, and 2026-09-19 attempts each generated `event_alert` but were skipped with `failure_reason=duplicate_successful_publish` and the same hash prefix.
-- Current assessment: GitHub Actions schedule delay harms timeliness, but the immediate no-message cause after 9/16 is the existing global message-hash dedupe defect, not source crawling or Telegram API failure.
+- Historical assessment: The 2026-09-17 through 2026-09-19 messages were suppressed by the global message-hash dedupe defect. That defect was fixed by the KST-date-scoped hash in commit `dcc009d` on 2026-10-24.
+- Resolution evidence: The 2026-11-11 production batch completed a real Telegram publish. The current unresolved timing issue is tracked above.
 - Mitigation applied: The primary GitHub Actions cron is now `0 17 * * *` (02:00 KST); the inactive local Cloudflare backup config is aligned to `15 17 * * *` (02:15 KST). This creates a larger recovery window before the morning riding period.
 - Remaining work:
-  - KST-date-scoped hashing was implemented locally on 2026-10-24; verify it on a natural production run after deployment.
+  - Keep monitoring date-scoped dedupe on production runs, including same-day duplicate suppression if two triggers overlap.
   - Measure the next several actual runner start times; GitHub Actions schedule remains best-effort.
   - Do not activate the Cloudflare backup until its credential issue and date-scoped dedupe are both resolved.
 

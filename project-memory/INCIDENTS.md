@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-10-24
+Last updated: 2026-11-11
 
 ## Role
 
@@ -21,6 +21,17 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-11-11: Telegram delivery was late but matched source
+
+- Symptom: The daily production batch did not start until 07:09 KST; Telegram arrived at 07:10 KST, several hours after the configured 02:00 KST trigger.
+- Impact: The message content was correct, but its delivery was several hours later than the configured trigger and may reduce usefulness for early rides.
+- Root cause: Unresolved. Supabase shows when ingest began, but does not distinguish late GitHub schedule event creation from runner queue delay.
+- Evidence: Ingest run `9e038064-371e-492d-b89d-0ecafff28dad` started at 07:09:54 KST; message run `fd49ef6b-047d-41c1-8c2b-60a15bf60fee` published successfully at 07:10:22 KST. The run had 17 source rows and one publish candidate, Hangang event `evntSn=485`. Regenerated fallback hash matched the successful KST-date-scoped publish record, and the user-received text matched the source fields. A 2026-10-29 batch also began late at 06:31 KST and published at 06:32 KST.
+- Fix: No scheduler fix applied during this verification. The Cloudflare backup config remains locally prepared for 02:15 KST but is not active in production because the available token lacks Worker/Cron edit permission.
+- Verification: Source selection, normalized dates/location/impact, exact regenerated message hash, and Telegram success status all matched for 2026-11-11.
+- Prevention: Compare GitHub Actions event-created, queued, and runner-start timestamps across upcoming runs. Apply and verify the Cloudflare backup only after credentials permit; retain same-day dedupe to avoid duplicate delivery.
+- Follow-up: Tracked in `project-memory/OPEN_ISSUES.md`.
 
 ## 2026-10-24: Scheduled batches stopped at mypy before ingestion
 

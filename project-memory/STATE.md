@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-10-24
+Last updated: 2026-11-11
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions sch
 
 ## Active Task
 
-The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed duplicate prevention to use the KST send date. GitHub Actions manual dry-run `40086638543` passed all checks and batch steps. A subsequent real-publish run `40087073647` generated a five-event alert and returned `TELEGRAM_STATUS=success`, `TELEGRAM_MESSAGE_ID=59`; Supabase recorded one successful publish. Verify the next natural 02:00 KST scheduled run. Cloudflare backup remains inactive pending its credential repair.
+The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed duplicate prevention to use the KST send date. The 2026-11-11 production batch published the sole current Hangang event candidate, and the received Telegram body matched the source and successful publish hash. The remaining operational concern is schedule timeliness: the configured 02:00 KST run began at 07:09 KST. Cloudflare backup remains inactive pending its credential repair.
 
 ## Current Runtime State
 
@@ -36,6 +36,12 @@ The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed
 - GitHub Actions schedule runs with real publish inputs:
   - `ENABLE_TELEGRAM_PUBLISH=true`
   - `DRY_RUN=false`
+- 2026-11-11 natural scheduled delivery and source consistency verification:
+  - Ingest run `9e038064-371e-492d-b89d-0ecafff28dad` started at 07:09:54 KST and completed successfully at 07:10:12 KST; message run `fd49ef6b-047d-41c1-8c2b-60a15bf60fee` completed at 07:10:22 KST.
+  - The ingest run contained 17 raw source rows across Hangang events, Hangang notices, and Ara Waterway notices. Exactly 1 normalized row was publishable: Hangang event `evntSn=485`, active 2026-10-15 through 2026-11-15 at `한강공원 일대 음수대`, impact `medium`.
+  - The generated fallback body was regenerated from the run's normalized source row; its KST-date-scoped hash matched the successful `publish_attempts` record (`5ea0ba4b54bd...`). `published_message_count=1` and the run had no recorded source error summary.
+  - The Telegram title, location, date range, impact level, reason, and official URL all matched the source row. No publishable event was omitted or added.
+  - The configured cron is 02:00 KST, but this run began at 07:09 KST. A prior verified batch on 2026-10-29 began at 06:31 KST and published at 06:32 KST. The late start is unresolved; Supabase timestamps alone do not distinguish GitHub schedule delivery delay from runner queue delay.
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-07 07:31 KST after the Supabase pooler prepared-statement fix.
 - Natural Cloudflare-triggered runs on 2026-07-07 through 2026-07-09 completed and published successfully, so the MVP production path was considered stable as of 2026-07-09.
@@ -280,22 +286,18 @@ The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed
 
 ## Next Actions
 
-1. Monitor the daily 02:00 KST production run and its delivery time for several days; GitHub Actions scheduling remains best-effort.
-2. Verify the restored GitHub Actions native daily schedule:
-   - Confirm the next 02:00 KST `schedule` run is created and its actual runner-start delay is recorded.
-   - Confirm `DRY_RUN=false`, `ENABLE_TELEGRAM_PUBLISH=true`, Supabase ingest, message generation, and Telegram publish complete.
-   - Keep Cloudflare cron disabled while GitHub schedule owns production.
-   - Keep Cloudflare Worker only as a diagnostic path until its `GITHUB_TOKEN` issue is separately resolved.
-3. Stabilize parsing before adding product features:
+1. Investigate the gap between the configured 02:00 KST cron and actual runner starts (06:31 on 2026-10-29; 07:09 on 2026-11-11). Use GitHub Actions run creation/queue timestamps to separate trigger delay from runner queue delay.
+2. Restore the Cloudflare backup only after obtaining a token with Worker and Cron edit permission; apply 02:15 KST and verify the production schedule is active. Keep checking that the same-day dedupe guard prevents a second send if both triggers execute.
+3. Continue lightweight natural-run monitoring. The 2026-11-11 run verifies source selection, KST-date-scoped publishing, and Telegram delivery after the 2026-10-24 recovery; retain a few more observations for repeat-alert behavior.
+4. Stabilize parsing before adding product features:
    - Review Hangang notice detail coverage only if source coverage becomes the priority.
    - Keep live-source smoke checks lightweight.
    - Keep the current `requests` + BeautifulSoup crawler stack unless a source repeatedly breaks on static HTML parsing.
    - Revisit Scrapling as a source-level parser adapter only after a concrete parser fragility or anti-bot/dynamic-rendering problem is observed.
-4. Add only one new regional source after parser stability improves.
-5. Add Telegram personal chat delivery before web or SNS:
+5. Add only one new regional source after parser stability improves.
+6. Add Telegram personal chat delivery before web or SNS:
    - Start with `/start`, `/stop`, stored `chat_id`, and `enabled` status.
    - Defer complex preferences; first personalization should be a simple region choice.
-6. Build a minimal web/admin surface only after Telegram personal delivery works.
-7. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
-8. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
-9. Verify the KST-date-scoped dedupe fix with natural production delivery before enabling the Cloudflare backup.
+7. Build a minimal web/admin surface only after Telegram personal delivery works.
+8. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
+9. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
