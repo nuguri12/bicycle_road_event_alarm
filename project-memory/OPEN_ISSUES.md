@@ -1,8 +1,26 @@
 # Open Issues
 
-Last updated: 2026-11-11
+Last updated: 2026-11-14
 
 ## Operational Risks
+
+### 2026-11-14 source-consistent Arisu Run alert lacks cycling-impact evidence
+
+- User-received alert: `evntSn=485`, `MEDIUM`, `한강공원 일대 음수대`, 2026-10-15 through 2026-11-15, reason `행사 또는 축제 관련 표현 감지`.
+- Official Hangang detail checked on 2026-11-14: https://hangang.seoul.go.kr/www/eventMng/detail.do?evntSn=485&mid=538&srchType=list . Title, location, date range, and source ID match. The challenge allows self-paced participation across Hangang Park fountains with no fixed start time, course, or distance. November 14 falls within the participation period.
+- Assessment: source-field consistency passes; the `MEDIUM` bicycle caution is unsubstantiated by this source. It is a keyword classification, not a documented route closure, timed mass event, or measured crowding. Do not infer that every bicycle path near a fountain is affected.
+- Prior related source checks: the 2026-10-24 `evntSn=466` alert omitted source-listed daily hours `13:00~17:00` and was sent after those hours; the 2026-10-26 `evntSn=445` drone show and `evntSn=456` outdoor library alerts matched outer date spans but their official detail schedules had no event on that Monday. These findings were reported to the user but had not been added to project memory or fixed.
+- Root cause in current code: Hangang event ingestion uses list cards; `parse_event_datetime` and `_is_active_on_fetched_kst_date` use outer date ranges. `classify_event` assigns `MEDIUM` from generic event/festival words. Detail schedule and cyclist-specific impact are not validated before publishing.
+- Next work: require specific bicycle-route impact evidence for `MEDIUM` alerts; handle recurrence and daily operating hours from source details when available; add focused regression cases for `445`, `456`, `466`, and `485`. Define how an ongoing self-paced challenge should be presented if it has no route warning.
+
+### Remaining work snapshot, reviewed 2026-11-14
+
+1. **Alert precision:** Resolve the `485` relevance issue and the `445`/`456`/`466` operating-day and hour mistakes above. Validate the resulting message against official detailed schedules.
+2. **Natural delivery and timeliness:** The 2026-11-11 Supabase records confirm source collection, Telegram publish, and a matching KST-date-scoped hash, but the batch started at 07:09 KST rather than 02:00 KST. Check GitHub Actions creation, queue, and runner timestamps. User receipt on 2026-11-14 confirms delivery only; its trigger and DB run were not checked in this review.
+3. **Scheduler backup:** Repair Cloudflare Worker edit credentials, verify its GitHub dispatch token and logs, then test and enable the prepared 02:15 KST backup only after same-day dedupe is proven in production. Historical Worker cron failed with `scriptThrewException` and the current backup is documented as inactive.
+4. **Source reliability:** Watch for Hangang timeouts from GitHub runners. Retain a visible degraded-source message when no publishable events remain after partial collection; investigate connectivity if the failure recurs.
+5. **Lower-priority maintenance:** Revisit Hangang notice detail coverage and Ara Waterway parser precision when a current source gap appears; evaluate batch correlation and no-event repeat frequency from actual run logs before adding mechanisms.
+6. **Product expansion after alert quality stabilizes:** Add one regional source and basic Telegram personal delivery before considering a web/admin surface. SNS, VPS, and richer preference controls remain deferred.
 
 ### 2026-10-29 and 2026-11-11 scheduled runs started late
 

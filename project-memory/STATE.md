@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-11-11
+Last updated: 2026-11-14
 
 ## Current Objective
 
@@ -8,10 +8,11 @@ Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions sch
 
 ## Active Task
 
-The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed duplicate prevention to use the KST send date. The 2026-11-11 production batch published the sole current Hangang event candidate, and the received Telegram body matched the source and successful publish hash. The remaining operational concern is schedule timeliness: the configured 02:00 KST run began at 07:09 KST. Cloudflare backup remains inactive pending its credential repair.
+The 2026-11-11 production batch published the sole Hangang candidate `evntSn=485`; its received Telegram body and KST-date-scoped publish hash matched the source row. The batch began at 07:09 KST despite the configured 02:00 KST trigger. The user reported another alert for `485` on 2026-11-14. Its official detail confirms the title, representative location, and date range, but describes a self-paced, park-wide fountain challenge with no fixed course, start time, or distance. The `MEDIUM` cycling caution therefore needs a source-evidence gate. This review did not query the 2026-11-14 run records. Cloudflare backup remains inactive pending credential repair. See `OPEN_ISSUES.md` for remaining work.
 
 ## Current Runtime State
 
+- 2026-11-14: The user reported an alert containing `evntSn=485`. Source comparison confirms exact title, representative location `한강공원 일대 음수대`, URL, and date span. November 14 is inside the self-paced challenge window. Source details do not support treating it as a verified bicycle-route obstruction. This review did not query the 2026-11-14 GitHub Actions or Supabase run records, so receipt alone does not prove which trigger fired.
 - 2026-10-24: Supabase PostgreSQL was reactivated. Local and GitHub dry-runs succeeded. Real-publish GitHub run `40087073647` passed CI, ingest, normalization, and message generation. It returned Telegram message ID `59`; Supabase message run `2ff02f43-d371-4dcf-8da0-c023b3061138` recorded `published_message_count=1` and `publish_attempts.status=success` for ingest run `d1dd3d24-41e4-4880-bf41-6d26fa77b846`. Natural scheduled delivery after recovery remains unverified.
 
 - Repository: `nuguri12/bicycle_road_event_alarm`
@@ -286,18 +287,10 @@ The 2026-10-24 recovery commit `dcc009d` restored the GitHub CI gate and changed
 
 ## Next Actions
 
-1. Investigate the gap between the configured 02:00 KST cron and actual runner starts (06:31 on 2026-10-29; 07:09 on 2026-11-11). Use GitHub Actions run creation/queue timestamps to separate trigger delay from runner queue delay.
-2. Restore the Cloudflare backup only after obtaining a token with Worker and Cron edit permission; apply 02:15 KST and verify the production schedule is active. Keep checking that the same-day dedupe guard prevents a second send if both triggers execute.
-3. Continue lightweight natural-run monitoring. The 2026-11-11 run verifies source selection, KST-date-scoped publishing, and Telegram delivery after the 2026-10-24 recovery; retain a few more observations for repeat-alert behavior.
-4. Stabilize parsing before adding product features:
-   - Review Hangang notice detail coverage only if source coverage becomes the priority.
-   - Keep live-source smoke checks lightweight.
-   - Keep the current `requests` + BeautifulSoup crawler stack unless a source repeatedly breaks on static HTML parsing.
-   - Revisit Scrapling as a source-level parser adapter only after a concrete parser fragility or anti-bot/dynamic-rendering problem is observed.
-5. Add only one new regional source after parser stability improves.
-6. Add Telegram personal chat delivery before web or SNS:
-   - Start with `/start`, `/stop`, stored `chat_id`, and `enabled` status.
-   - Defer complex preferences; first personalization should be a simple region choice.
-7. Build a minimal web/admin surface only after Telegram personal delivery works.
-8. Defer SNS publishing, Hermes Agent evaluation, VPS scheduler changes, and richer preference controls until real usage proves the need.
-9. Review whether message-stage run summaries are sufficient for operations correlation before adding a dedicated batch id.
+1. Correct alert precision: require cycling-impact evidence and account for actual operating days and hours in Hangang event details. Regression cases: `485`, `445`, `456`, `466`.
+2. Investigate the gap between the configured 02:00 KST cron and actual starts (06:31 on 2026-10-29; 07:09 on 2026-11-11). Check GitHub Actions creation, queue, and runner timestamps. Verify the 2026-11-14 run record and continue monitoring daily duplicate behavior.
+3. Repair and validate the Cloudflare Worker backup dispatch and credentials before enabling its prepared 02:15 KST cron.
+4. Investigate recurring Hangang runner timeouts if observed; retain degraded-source warnings for incomplete collection.
+5. Address lower-priority parser and operations issues only when current evidence warrants them. Add a regional source and personal Telegram delivery after alert quality is stable.
+
+See the dated `Remaining work snapshot` in `OPEN_ISSUES.md` for evidence and scope.
