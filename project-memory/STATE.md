@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-11-14
+Last updated: 2026-11-17
 
 ## Current Objective
 
@@ -8,7 +8,7 @@ Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions sch
 
 ## Active Task
 
-The 2026-11-11 production batch published the sole Hangang candidate `evntSn=485`; its received Telegram body and KST-date-scoped publish hash matched the source row. The batch began at 07:09 KST despite the configured 02:00 KST trigger. The user reported another alert for `485` on 2026-11-14. Its official detail confirms the title, representative location, and date range, but describes a self-paced, park-wide fountain challenge with no fixed course, start time, or distance. The `MEDIUM` cycling caution therefore needs a source-evidence gate. This review did not query the 2026-11-14 run records. Cloudflare backup remains inactive pending credential repair. See `OPEN_ISSUES.md` for remaining work.
+The 2026-11-16 false no-event defect for Ara Waterway notice `1234` is fixed: explicit abbreviated-year date ranges in source bodies now take precedence over the notice publication date. The fixture-backed regression and replay of the stored production record produce the active November 10-December 31, 2026 closure candidate. Other priorities include the unresolved Hangang alert-precision issue from `evntSn=485`, schedule timeliness, and the inactive Cloudflare backup; see `OPEN_ISSUES.md`.
 
 ## Current Runtime State
 
@@ -43,6 +43,12 @@ The 2026-11-11 production batch published the sole Hangang candidate `evntSn=485
   - The generated fallback body was regenerated from the run's normalized source row; its KST-date-scoped hash matched the successful `publish_attempts` record (`5ea0ba4b54bd...`). `published_message_count=1` and the run had no recorded source error summary.
   - The Telegram title, location, date range, impact level, reason, and official URL all matched the source row. No publishable event was omitted or added.
   - The configured cron is 02:00 KST, but this run began at 07:09 KST. A prior verified batch on 2026-10-29 began at 06:31 KST and published at 06:32 KST. The late start is unresolved; Supabase timestamps alone do not distinguish GitHub schedule delivery delay from runner queue delay.
+- 2026-11-16 false no-event message verification:
+  - Ingest run `9db7b59b-6c8b-4483-a93a-a1f54162290d` ran 06:29:26-06:29:43 KST; message run `b0277531-0672-44bd-b97f-040601ce0f55` completed at 06:29:53 KST with `message_context=no_event`, `published_message_count=1`, and `publish_attempts.status=success`.
+  - The batch collected 16 rows (13 Ara Waterway notices, 3 Hangang notices); all source calls completed and the ingest run had no error summary. Zero normalized rows were publishable.
+  - Ara notice `1234` (`https://www.kwater.or.kr/giwaterway/ara/BBSMSTR_000000000021/1234/view.do`) stated in its body that route paving work would close three bicycle-route sections from 2026-11-10 through 2026-12-31, including weekends and holidays. This source event was active on 2026-11-16, so the received no-event message was inconsistent.
+  - The title/body classifier correctly recognized high-impact road closure and the missing-location route fallback applied, but date normalization used the posting date (2026-11-06) as the start and left the end unset. The active-date check then excluded the event on 2026-11-16. The source body contains the actual explicit closure interval; see `project-memory/OPEN_ISSUES.md` for the focused fix and tests.
+  - Fixed in the current change: date-range parsing now supports abbreviated two-digit years with Korean weekday annotations and searches all explicit ranges before falling back to single posted dates. Regression tests cover the actual notice body, active-date inclusion, and post-expiry exclusion. Replaying the stored DB row now yields `2026-11-10` through `2026-12-31`, `cyclist_impact_level=high`, and `publish_candidate=True`; the fallback title retains the route names. The location field remains the safe fallback `구간 확인 필요` because the source crawler did not populate a structured location.
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-05 07:31 KST.
 - Natural Cloudflare-triggered Telegram no-event message was received at 2026-07-07 07:31 KST after the Supabase pooler prepared-statement fix.
 - Natural Cloudflare-triggered runs on 2026-07-07 through 2026-07-09 completed and published successfully, so the MVP production path was considered stable as of 2026-07-09.

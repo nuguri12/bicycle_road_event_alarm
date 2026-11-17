@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 from bicycle_road_event_alarm.db.models import RawEvent
 from bicycle_road_event_alarm.normalization.normalizer import normalize_raw_event
@@ -62,6 +63,53 @@ def test_normalize_raw_event_allows_active_date_range_for_today_publish() -> Non
 
     assert normalized.validation_status == "valid"
     assert normalized.publish_candidate is True
+
+
+def test_normalize_raw_event_publishes_active_ara_closure_from_abbreviated_body_range() -> None:
+    raw_body = Path("tests/fixtures/crawler/ara_waterway_notice_1234.txt").read_text()
+    normalized = normalize_raw_event(
+        make_raw_event(
+            raw_title=(
+                "(~'26. 12.) 아라뱃길 자전거도로 통행차단 알림 "
+                "[(북)청운교-시천교-계양대교, 굴포천(서) 자전거길 구간] "
+                "※ 주말 및 공휴일 포함"
+            ),
+            raw_date_text="2026-11-06",
+            raw_location_text=None,
+            raw_body=raw_body,
+            fetched_at=datetime(2026, 11, 15, 21, 29, tzinfo=UTC),
+        )
+    )
+
+    assert normalized.start_datetime == datetime(2026, 11, 9, 15, 0, tzinfo=UTC)
+    assert normalized.end_datetime == datetime(2026, 12, 31, 14, 59, tzinfo=UTC)
+    assert normalized.cyclist_impact_level == "high"
+    assert normalized.validation_status == "needs_review"
+    assert normalized.location_name == "구간 확인 필요"
+    assert "청운교-시천교-계양대교" in normalized.title
+    assert "굴포천(서) 자전거길" in normalized.title
+    assert normalized.publish_candidate is True
+
+
+def test_normalize_raw_event_excludes_ara_closure_after_abbreviated_body_range() -> None:
+    normalized = normalize_raw_event(
+        make_raw_event(
+            raw_title=(
+                "(~'26. 12.) 아라뱃길 자전거도로 통행차단 알림 "
+                "[(북)청운교-시천교-계양대교, 굴포천(서) 자전거길 구간] "
+                "※ 주말 및 공휴일 포함"
+            ),
+            raw_date_text="2026-11-06",
+            raw_location_text=None,
+            raw_body=(
+                "자전거도로 포장 보수공사로 자전거도로를 차단합니다. "
+                "차단기간 '26. 11. 10.(화) ~ '26. 12. 31.(목)"
+            ),
+            fetched_at=datetime(2027, 1, 1, 0, 0, tzinfo=UTC),
+        )
+    )
+
+    assert normalized.publish_candidate is False
 
 
 def test_normalize_raw_event_marks_missing_date_invalid() -> None:

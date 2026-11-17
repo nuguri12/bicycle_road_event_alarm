@@ -18,10 +18,12 @@ DATE_PATTERN = re.compile(
     r"(?:\s*~\s*(?P<end_hour>\d{1,2}):(?P<end_minute>\d{2}))?"
 )
 DATE_RANGE_PATTERN = re.compile(
-    r"(?P<start_year>\d{4})[.\-/](?P<start_month>\d{1,2})[.\-/](?P<start_day>\d{1,2})"
-    r"(?:\([^)]+\))?"
-    r"\s*~\s*"
-    r"(?P<end_year>\d{4})[.\-/](?P<end_month>\d{1,2})[.\-/](?P<end_day>\d{1,2})"
+    r"(?:['’]\s*)?(?P<start_year>\d{2}|\d{4})\s*[.\-/]\s*"
+    r"(?P<start_month>\d{1,2})\s*[.\-/]\s*(?P<start_day>\d{1,2})\.?"
+    r"(?:\s*\([^)]+\))?\s*~\s*(?:['’]\s*)?"
+    r"(?P<end_year>\d{2}|\d{4})\s*[.\-/]\s*"
+    r"(?P<end_month>\d{1,2})\s*[.\-/]\s*(?P<end_day>\d{1,2})\.?"
+    r"(?:\s*\([^)]+\))?"
 )
 KST = ZoneInfo("Asia/Seoul")
 
@@ -34,12 +36,17 @@ def parse_event_datetime(
     fetched_at: datetime,
 ) -> ParsedEventDateTime:
     del fetched_at
-    for source_text in (raw_date_text, raw_body, raw_title):
+    source_texts = (raw_date_text, raw_body, raw_title)
+    for source_text in source_texts:
         if source_text is None:
             continue
         range_match = DATE_RANGE_PATTERN.search(source_text)
         if range_match is not None:
             return _build_date_range(range_match)
+
+    for source_text in source_texts:
+        if source_text is None:
+            continue
         match = DATE_PATTERN.search(source_text)
         if match is None:
             continue
@@ -49,7 +56,7 @@ def parse_event_datetime(
 
 def _build_date_range(match: re.Match[str]) -> ParsedEventDateTime:
     start = datetime(
-        int(match.group("start_year")),
+        _expand_year(match.group("start_year")),
         int(match.group("start_month")),
         int(match.group("start_day")),
         0,
@@ -57,7 +64,7 @@ def _build_date_range(match: re.Match[str]) -> ParsedEventDateTime:
         tzinfo=KST,
     )
     end = datetime(
-        int(match.group("end_year")),
+        _expand_year(match.group("end_year")),
         int(match.group("end_month")),
         int(match.group("end_day")),
         23,
@@ -65,6 +72,13 @@ def _build_date_range(match: re.Match[str]) -> ParsedEventDateTime:
         tzinfo=KST,
     )
     return ParsedEventDateTime(start=start, end=end)
+
+
+def _expand_year(year: str) -> int:
+    value = int(year)
+    if value >= 100:
+        return value
+    return 2000 + value if value < 70 else 1900 + value
 
 
 # datetime 생성: 시간 정보가 없으면 자정 시작으로 보수적으로 저장합니다.

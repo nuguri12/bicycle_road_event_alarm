@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-11-11
+Last updated: 2026-11-17
 
 ## Role
 
@@ -163,3 +163,11 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Verification: The 2026-07-06 issue was correctly reclassified from possible scheduler failure to normalization failure after reviewing the GitHub Actions log.
 - Prevention: Future agents should not infer "cron did not run" from "Telegram did not arrive" without checking Actions logs and DB state.
 - Follow-up: Consider adding clearer run-level status summaries to `run_logs`.
+
+## 2026-11-16: False no-event Telegram message from Ara Waterway notice 1234
+
+- Symptom: The user received a no-event alert at 06:29 KST, although an official bicycle-route closure was active that day.
+- Root cause: The crawler stored notice `1234` with publication date `2026-11-06` and the body text containing the actual interval `2026-11-10` through `2026-12-31`. The date parser did not extract that interval, leaving the normalized end unset and using the posting date as the start. The active-date check excluded it on November 16. The classifier did recognize high impact; the event was omitted by date eligibility, not Telegram delivery or source availability.
+- Fix: Date-range parsing now accepts two-digit years with Korean weekday annotations and searches explicit ranges in all source fields before using a single posted date. The true closure interval therefore overrides the notice publication date. Missing structured location remains represented by `구간 확인 필요`; the original source title is retained, including route details.
+- Verification: The initial regression tests failed against the old parser as expected. After the fix, the actual notice-body fixture produced start `2026-11-10`, end `2026-12-31`, and `publish_candidate=True` for a 2026-11-16 fetch; a post-expiry fetch was excluded. A read-only replay of the stored Supabase raw row produced the same interval, HIGH impact, and fallback event-alert body with the route names preserved in its title. Full test and CI-equivalent checks are recorded in the change report.
+- Prevention/follow-up: Keep the fixture-backed date-range and expiry regression coverage. A more precise structured location extraction is optional follow-up; it is not required to avoid this false no-event because the notice title preserves the route names.

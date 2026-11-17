@@ -31,6 +31,20 @@ def test_parse_event_datetime_extracts_full_date_range() -> None:
     assert result.end == datetime(2026, 7, 5, 23, 59, tzinfo=KST)
 
 
+def test_parse_event_datetime_prefers_abbreviated_body_range_to_posted_date() -> None:
+    fetched_at = datetime(2026, 11, 15, 21, 29, tzinfo=UTC)
+
+    result = parse_event_datetime(
+        "2026-11-06",
+        "차단기간 '26. 11. 10.(화) ~ '26. 12. 31.(목)",
+        "'26년 11월 아라뱃길 자전거도로 통제 일정·구간 알림",
+        fetched_at,
+    )
+
+    assert result.start == datetime(2026, 11, 10, 0, 0, tzinfo=KST)
+    assert result.end == datetime(2026, 12, 31, 23, 59, tzinfo=KST)
+
+
 def test_extract_location_prefers_raw_location_text() -> None:
     result = extract_location("잠실대교 남단 ~ 뚝섬한강공원", None, None)
 

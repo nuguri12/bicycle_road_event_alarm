@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-11-14
+Last updated: 2026-11-17
 
 ## Operational Risks
 
@@ -15,9 +15,9 @@ Last updated: 2026-11-14
 
 ### Remaining work snapshot, reviewed 2026-11-14
 
-1. **Alert precision:** Resolve the `485` relevance issue and the `445`/`456`/`466` operating-day and hour mistakes above. Validate the resulting message against official detailed schedules.
-2. **Natural delivery and timeliness:** The 2026-11-11 Supabase records confirm source collection, Telegram publish, and a matching KST-date-scoped hash, but the batch started at 07:09 KST rather than 02:00 KST. Check GitHub Actions creation, queue, and runner timestamps. User receipt on 2026-11-14 confirms delivery only; its trigger and DB run were not checked in this review.
-3. **Scheduler backup:** Repair Cloudflare Worker edit credentials, verify its GitHub dispatch token and logs, then test and enable the prepared 02:15 KST backup only after same-day dedupe is proven in production. Historical Worker cron failed with `scriptThrewException` and the current backup is documented as inactive.
+1. **Alert precision:** Resolve the `485` relevance issue and the `445`/`456`/`466` operating-day and hour mistakes. Validate messages against official detailed schedules.
+2. **Natural delivery and timeliness:** The 2026-11-11 Supabase records confirm source collection, Telegram publish, and a matching KST-date-scoped hash, but the batch started at 07:09 KST rather than 02:00 KST. Check GitHub Actions creation, queue, and runner timestamps. User receipt on 2026-11-14 confirms delivery only; its trigger and DB run were not checked in that review.
+3. **Scheduler backup:** Repair Cloudflare Worker edit credentials, verify its GitHub dispatch token and logs, then test and enable the prepared 02:15 KST backup only after same-day dedupe is proven in production. Historical Worker cron failed with `scriptThrewException`; the backup is inactive.
 4. **Source reliability:** Watch for Hangang timeouts from GitHub runners. Retain a visible degraded-source message when no publishable events remain after partial collection; investigate connectivity if the failure recurs.
 5. **Lower-priority maintenance:** Revisit Hangang notice detail coverage and Ara Waterway parser precision when a current source gap appears; evaluate batch correlation and no-event repeat frequency from actual run logs before adding mechanisms.
 6. **Product expansion after alert quality stabilizes:** Add one regional source and basic Telegram personal delivery before considering a web/admin surface. SNS, VPS, and richer preference controls remain deferred.
