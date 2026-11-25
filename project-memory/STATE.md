@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-11-17
+Last updated: 2026-11-18
 
 ## Current Objective
 
@@ -8,10 +8,16 @@ Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions sch
 
 ## Active Task
 
-The 2026-11-16 false no-event defect for Ara Waterway notice `1234` is fixed: explicit abbreviated-year date ranges in source bodies now take precedence over the notice publication date. The fixture-backed regression and replay of the stored production record produce the active November 10-December 31, 2026 closure candidate. Other priorities include the unresolved Hangang alert-precision issue from `evntSn=485`, schedule timeliness, and the inactive Cloudflare backup; see `OPEN_ISSUES.md`.
+The 2026-11-16 false no-event defect for Ara Waterway notice `1234` is fixed and pushed. On 2026-11-18 the scheduled run arrived late at 08:44 KST and published the single active closure alert successfully at 08:45:57 KST. The message matches the official notice; no duplicate normalization keys or duplicate-suppression attempt were found. The recurring schedule delay, unresolved Hangang alert precision, and inactive Cloudflare backup remain tracked in `OPEN_ISSUES.md`.
 
 ## Current Runtime State
 
+- 2026-11-18 Telegram delivery and source consistency:
+  - At 08:26 KST there was no November 18 GitHub Actions run or Supabase row. A delayed scheduled workflow then appeared: GitHub Actions run `44202044998`, event `schedule`, started at 08:44:53 KST and completed successfully.
+  - Supabase ingest run `e7990572-63cf-471f-a394-463a07e74b31` ran 08:45:30-08:45:47 KST. It refreshed 16 observed raw rows (13 Ara Waterway and 3 Hangang notices; the run's `raw_event_count=0` counts only newly inserted rows). Message run `42937e98-1b66-44b9-9b60-e348284bf2a8` and its Telegram publish attempt completed successfully at 08:45:57 KST.
+  - The run contained exactly one publishable normalized event: Ara notice `1234`, HIGH impact, `2026-11-10` through `2026-12-31`. There were zero duplicate-key groups. The K-water official page confirms the same closure dates and named route sections: https://www.kwater.or.kr/giwaterway/ara/BBSMSTR_000000000021/1234/view.do .
+  - Regenerating the fallback message from the current run's normalized event produced the same message hash as the successful publish attempt (`eece45a67c5468ba7510...`). No duplicate suppression occurred. `location_name` remains `구간 확인 필요`; the source title in the message retains the affected route names.
+  - The message was delayed by about 6 hours 45 minutes relative to the configured 02:00 KST schedule. Available timestamps do not establish whether GitHub schedule delivery or runner allocation caused the delay.
 - 2026-11-14: The user reported an alert containing `evntSn=485`. Source comparison confirms exact title, representative location `한강공원 일대 음수대`, URL, and date span. November 14 is inside the self-paced challenge window. Source details do not support treating it as a verified bicycle-route obstruction. This review did not query the 2026-11-14 GitHub Actions or Supabase run records, so receipt alone does not prove which trigger fired.
 - 2026-10-24: Supabase PostgreSQL was reactivated. Local and GitHub dry-runs succeeded. Real-publish GitHub run `40087073647` passed CI, ingest, normalization, and message generation. It returned Telegram message ID `59`; Supabase message run `2ff02f43-d371-4dcf-8da0-c023b3061138` recorded `published_message_count=1` and `publish_attempts.status=success` for ingest run `d1dd3d24-41e4-4880-bf41-6d26fa77b846`. Natural scheduled delivery after recovery remains unverified.
 

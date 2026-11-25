@@ -1,6 +1,6 @@
 # Open Issues
 
-Last updated: 2026-11-17
+Last updated: 2026-11-18
 
 ## Operational Risks
 
@@ -22,7 +22,7 @@ Last updated: 2026-11-17
 5. **Lower-priority maintenance:** Revisit Hangang notice detail coverage and Ara Waterway parser precision when a current source gap appears; evaluate batch correlation and no-event repeat frequency from actual run logs before adding mechanisms.
 6. **Product expansion after alert quality stabilizes:** Add one regional source and basic Telegram personal delivery before considering a web/admin surface. SNS, VPS, and richer preference controls remain deferred.
 
-### 2026-10-29 and 2026-11-11 scheduled runs started late
+### Scheduled Telegram delivery delayed or missing (2026-10-29, 11-11, 11-18)
 
 - Expected schedule: daily at 02:00 KST (`0 17 * * *`).
 - Verified evidence:
@@ -30,9 +30,13 @@ Last updated: 2026-11-17
   - 2026-11-11 ingest started at 07:09:54 KST and Telegram publish succeeded at 07:10:22 KST.
   - The 2026-11-11 run completed source collection, normalization, message generation, and Telegram publishing. Among 17 raw rows, exactly one was publishable: Hangang event `evntSn=485`.
   - The regenerated fallback body hash matched the successful KST-date-scoped publish record, and every user-visible field matched the ingested official source.
+  - On 2026-11-18, no run was visible at 08:26 KST. Scheduled GitHub Actions run `44202044998` eventually started at 08:44:53 KST and succeeded; Supabase recorded the corresponding ingest and successful Telegram publish by 08:45:57 KST.
+  - This run produced one publishable event (Ara notice `1234`), zero normalized duplicate-key groups, and `publish_attempts.status=success` with no failure reason. Regenerating the fallback body reproduced its dated message hash (`eece45a67c5468ba7510...`), disproving duplicate suppression as the cause of the initial delay.
 - Current assessment: The production data and publish path are functioning, but actual run start remains over four hours later than the configured cron. Supabase run timestamps do not reveal whether GitHub created the schedule event late or runner allocation was queued.
+- 2026-11-18 assessment: This was a delayed, not missing, scheduled delivery. The message was published successfully at 08:45:57 KST, but the schedule delay remains operationally unresolved. The evidence does not show duplicate-message blocking. GitHub run creation and runner start share the same timestamp, so distinguish schedule dispatch delay from queue delay using job-level timing if available.
 - Follow-up:
   - Inspect GitHub Actions event creation, queued, and runner-start timestamps for several scheduled runs to localize the delay.
+  - Compare the 02:00 KST cron against `created_at`, `run_started_at`, and job-level `queued_at`/`started_at` for the next scheduled runs.
   - Cloudflare backup remains inactive; the local 02:15 KST config needs to be applied with a token that can edit Worker scripts and Cron Triggers.
   - Before enabling both triggers, confirm same-day duplicate suppression with overlapping scheduled runs; KST-date-scoped hashing is deployed in commit `dcc009d`.
 

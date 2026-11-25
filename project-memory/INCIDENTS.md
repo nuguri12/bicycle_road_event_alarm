@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-11-17
+Last updated: 2026-11-18
 
 ## Role
 
@@ -171,3 +171,11 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Fix: Date-range parsing now accepts two-digit years with Korean weekday annotations and searches explicit ranges in all source fields before using a single posted date. The true closure interval therefore overrides the notice publication date. Missing structured location remains represented by `구간 확인 필요`; the original source title is retained, including route details.
 - Verification: The initial regression tests failed against the old parser as expected. After the fix, the actual notice-body fixture produced start `2026-11-10`, end `2026-12-31`, and `publish_candidate=True` for a 2026-11-16 fetch; a post-expiry fetch was excluded. A read-only replay of the stored Supabase raw row produced the same interval, HIGH impact, and fallback event-alert body with the route names preserved in its title. Full test and CI-equivalent checks are recorded in the change report.
 - Prevention/follow-up: Keep the fixture-backed date-range and expiry regression coverage. A more precise structured location extraction is optional follow-up; it is not required to avoid this false no-event because the notice title preserves the route names.
+
+## 2026-11-18: Telegram delivery arrived late; source and message matched
+
+- Symptom: The 02:00 KST scheduled Telegram message had not arrived by 08:26 KST.
+- Root cause: The scheduled GitHub Actions run was created and started at 08:44:53 KST. Available timestamps do not distinguish late schedule delivery from runner queue delay.
+- Fix: No trigger configuration was changed. The delayed scheduled run completed and published successfully at 08:45:57 KST.
+- Verification: GitHub Actions run `44202044998` completed successfully. Supabase ingest run `e7990572-63cf-471f-a394-463a07e74b31` refreshed 16 raw observations; message run `42937e98-1b66-44b9-9b60-e348284bf2a8` recorded a successful publish. Exactly one normalized candidate, Ara notice `1234`, was active for 2026-11-18, with zero duplicate-key groups. Regenerated fallback hash matched the successful attempt (`eece45a67c5468ba7510...`). The official K-water notice confirms the message's interval and route details.
+- Prevention/follow-up: Continue tracking scheduled run creation/start and job queue/start times. Duplicate prevention was not implicated. The displayed location remains `구간 확인 필요` because the source title, not the structured location field, carries the route names.
