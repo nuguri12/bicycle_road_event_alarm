@@ -72,8 +72,11 @@ def save_raw_event_candidates(
     saved_count = 0
 
     for candidate in candidates:
+        # shortcut: matches by source_url alone, so two real notices that share one
+        # synthetic URL (e.g. Hangang notices missing nttNo) collapse into one row
+        # (upgrade: give each source its own stable id instead of a shared fallback URL)
         existing = session.scalar(
-            select(RawEvent).where(RawEvent.content_hash == candidate.content_hash)
+            select(RawEvent).where(RawEvent.source_url == candidate.source_url)
         )
         if existing is not None:
             refresh_existing_raw_event(existing, run_id, candidate)
@@ -97,4 +100,5 @@ def refresh_existing_raw_event(
     raw_event.raw_body = candidate.raw_body
     raw_event.raw_date_text = candidate.raw_date_text
     raw_event.raw_location_text = candidate.raw_location_text
+    raw_event.content_hash = candidate.content_hash
     raw_event.fetched_at = datetime.now(UTC)

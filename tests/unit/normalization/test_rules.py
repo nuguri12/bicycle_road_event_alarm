@@ -72,3 +72,18 @@ def test_classify_event_detects_road_closure_high_impact() -> None:
     assert result.event_type == "road_closure"
     assert result.cyclist_impact_level == "high"
     assert result.publish_candidate_impact is True
+
+
+def test_classify_event_rejects_medium_impact_without_bicycle_mention() -> None:
+    result = classify_event("한강공원 여름 축제", "한강공원 일대에서 축제가 열립니다.")
+
+    assert result.cyclist_impact_level == "unknown"
+    assert result.publish_candidate_impact is False
+
+
+def test_classify_event_keeps_medium_impact_with_bicycle_mention() -> None:
+    result = classify_event("한강공원 자전거 축제", "자전거도로 인근에서 축제가 열립니다.")
+
+    assert result.event_type == "public_event"
+    assert result.cyclist_impact_level == "medium"
+    assert result.publish_candidate_impact is True

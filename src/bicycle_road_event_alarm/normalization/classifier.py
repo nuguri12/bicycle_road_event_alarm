@@ -35,7 +35,9 @@ def classify_event(title: str | None, body: str | None) -> ClassificationResult:
             cyclist_impact_reason="교통통제 또는 우회 관련 표현 감지",
             publish_candidate_impact=True,
         )
-    if any(keyword in text for keyword in MEDIUM_IMPACT_KEYWORDS):
+    # shortcut: requires a literal "자전거" mention; doesn't verify operating hours/days
+    # (upgrade: OPEN_ISSUES.md "Alert precision" item)
+    if any(keyword in text for keyword in MEDIUM_IMPACT_KEYWORDS) and "자전거" in text:
         return ClassificationResult(
             event_type="public_event",
             cyclist_impact_level="medium",
