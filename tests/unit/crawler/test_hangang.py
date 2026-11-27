@@ -55,3 +55,36 @@ def test_parse_hangang_notices_page_ignores_unrelated_api_items() -> None:
 def test_hangang_source_urls_point_to_official_hangang_pages() -> None:
     assert HANGANG_EVENTS_URL == "https://hangang.seoul.go.kr/www/eventMng/list.do?mid=538"
     assert HANGANG_NOTICES_URL == "https://seoulboard.seoul.go.kr/front/bbs.json?bbsNo=5211"
+
+
+def test_hangang_notices_missing_nttno_get_distinct_fallback_source_urls() -> None:
+    raw_json = """
+    {
+      "listVO": {
+        "listObject": [
+          {
+            "sj": "한강공원 자전거도로 1차 통제 안내",
+            "writngDe": "2026-07-01 10:11.12",
+            "sumry": "자전거도로 일부 구간 통제가 예정되어 있습니다."
+          },
+          {
+            "sj": "한강공원 자전거도로 2차 통제 안내",
+            "writngDe": "2026-07-02 09:00.00",
+            "sumry": "자전거도로 다른 구간도 통제가 예정되어 있습니다."
+          }
+        ]
+      }
+    }
+    """
+
+    candidates = parse_hangang_notices_page(raw_json)
+
+    assert len(candidates) == 2
+    first, second = candidates
+    assert first.source_url != second.source_url
+    assert first.source_url.startswith(
+        "https://hangang.seoul.go.kr/www/bbsPost/30/list.do?mid=608#fallback/"
+    )
+    assert second.source_url.startswith(
+        "https://hangang.seoul.go.kr/www/bbsPost/30/list.do?mid=608#fallback/"
+    )

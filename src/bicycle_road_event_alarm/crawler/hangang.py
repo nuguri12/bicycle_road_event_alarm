@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from urllib.parse import urljoin
@@ -154,7 +155,11 @@ def _notice_source_url(item: dict[str, object]) -> str:
     ntt_no = item.get("nttNo")
     if isinstance(ntt_no, int | str) and str(ntt_no).strip():
         return f"{HANGANG_NOTICES_PUBLIC_URL}#view/{ntt_no}"
-    return HANGANG_NOTICES_PUBLIC_URL
+    # nttNo가 없는 공지는 제목+작성일 기반 안정적 식별자를 붙여, 같은 fallback URL을
+    # 공유하는 서로 다른 공지가 raw_events에서 한 row로 뭉개지지 않게 합니다.
+    fallback_key = f"{_string_value(item.get('sj'))}|{_string_value(item.get('writngDe'))}"
+    fallback_id = hashlib.sha256(fallback_key.encode("utf-8")).hexdigest()[:16]
+    return f"{HANGANG_NOTICES_PUBLIC_URL}#fallback/{fallback_id}"
 
 
 def _string_value(value: object) -> str | None:

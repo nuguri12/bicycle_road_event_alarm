@@ -72,9 +72,6 @@ def save_raw_event_candidates(
     saved_count = 0
 
     for candidate in candidates:
-        # shortcut: matches by source_url alone, so two real notices that share one
-        # synthetic URL (e.g. Hangang notices missing nttNo) collapse into one row
-        # (upgrade: give each source its own stable id instead of a shared fallback URL)
         existing = session.scalar(
             select(RawEvent).where(RawEvent.source_url == candidate.source_url)
         )

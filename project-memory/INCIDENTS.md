@@ -1,6 +1,6 @@
 # Incidents
 
-Last updated: 2026-11-18
+Last updated: 2026-11-27
 
 ## Role
 
@@ -21,6 +21,16 @@ Keep unresolved follow-ups in `OPEN_ISSUES.md`. Keep resolved incident history h
 - Prevention:
 - Follow-up:
 ```
+
+## 2026-11-27: Ingest crashed before Telegram publish after source_url dedupe change
+
+- Symptom: The 02:00 KST scheduled Telegram message did not arrive. GitHub Actions run `45919712207` (commit `0402599`) failed job `validate-and-run` after only 54 seconds.
+- Impact: The batch died at the `Ingest raw events` step; `Normalize events` and `Generate and publish message` never ran, so no Telegram message was sent and no `run_logs` row was persisted for the failure (the transaction rolled back before `finish_run_log`/`commit`).
+- Root cause: Commit `0402599` changed `save_raw_event_candidates` to match existing `raw_events` rows by `source_url` instead of `content_hash`, and to overwrite `content_hash` on refresh. `raw_events` only has a `UniqueConstraint` on `content_hash` (none on `source_url`). `_notice_source_url` in `crawler/hangang.py` falls back to one shared constant URL (`HANGANG_NOTICES_PUBLIC_URL`) for any Hangang notice item missing `nttNo`. When two distinct notices in the same ingest batch both lacked `nttNo`, the new source_url-based matching collapsed them into one row and the content_hash overwrite could violate `uq_raw_events_content_hash`, raising an uncaught exception in `ingest_raw_events.main()` (no try/except existed around the ingest/save call).
+- Fix: `_notice_source_url` now derives a stable per-notice fallback id (`sha256` of title+`writngDe`) instead of returning the shared constant, so distinct notices no longer share a `source_url`. `ingest_raw_events.main()` now wraps the ingest/save block in try/except: on any exception it rolls back, writes a `status="failed"` `run_logs` row with the error captured in `error_summary`, commits that, and re-raises so CI still fails loudly.
+- Verification: Added `test_hangang_notices_missing_nttno_get_distinct_fallback_source_urls` (asserts two nttNo-less notices get different fallback URLs) and `test_ingest_raw_events_cli_records_failed_run_log_on_unhandled_error` (asserts rollback + failed run_log persisted + re-raise on an unhandled exception from `save_raw_event_candidates`). `python -m pytest -q` reported `114 passed`; ruff, mypy, and black all passed locally.
+- Prevention: Do not match/update DB rows on a column that can legitimately collide across distinct real-world records unless it has its own uniqueness guarantee or the code gives every record a stable per-item identity first. Any CLI entrypoint that writes `run_logs` should wrap its main work in try/except so failures are diagnosable from Supabase, not only from GitHub Actions logs (which require elevated repo access to download).
+- Follow-up: Re-dispatch the `Manual Batch` workflow manually to deliver today's message once this fix is merged, since the 02:00 KST schedule already fired and failed for today.
 
 ## 2026-11-11: Telegram delivery was late but matched source
 
