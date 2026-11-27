@@ -1,6 +1,6 @@
 # State
 
-Last updated: 2026-11-18
+Last updated: 2026-11-27
 
 ## Current Objective
 
@@ -8,7 +8,9 @@ Operate and verify the Daily Cycling Event Alert Service as a GitHub Actions sch
 
 ## Active Task
 
-The 2026-11-16 false no-event defect for Ara Waterway notice `1234` is fixed and pushed. On 2026-11-18 the scheduled run arrived late at 08:44 KST and published the single active closure alert successfully at 08:45:57 KST. The message matches the official notice; no duplicate normalization keys or duplicate-suppression attempt were found. The recurring schedule delay, unresolved Hangang alert precision, and inactive Cloudflare backup remain tracked in `OPEN_ISSUES.md`.
+The 2026-11-27 02:00 KST scheduled `Manual Batch` run (`45919712207`, commit `0402599`) failed at `Ingest raw events` and never reached message generation or Telegram publish, so no alert was sent that day. Root cause: commit `0402599` matched/updated `raw_events` by `source_url` instead of `content_hash`; Hangang notices missing `nttNo` all shared one fallback `source_url`, so distinct notices collapsed into one row and the `content_hash` overwrite could violate the column's unique constraint, raising an uncaught exception in `ingest_raw_events.main()`. Fix commits `d5cda06`/`014acf9` give each `nttNo`-less notice a stable per-item fallback URL and make `ingest_raw_events.main()` persist a `status="failed"` `run_logs` row with the error before re-raising. All local checks (pytest/ruff/mypy/black) pass; pushed to `origin/main`. The user declined a manual re-dispatch for 2026-11-27 and will confirm the 2026-11-28 02:00 KST scheduled run's Telegram delivery. Details in `INCIDENTS.md`.
+
+The 2026-11-16 false no-event defect for Ara Waterway notice `1234` is fixed and pushed. On 2026-11-18 the scheduled run arrived late at 08:44 KST and published the single active closure alert successfully at 08:45:57 KST. The message matches the official notice; no duplicate normalization keys or duplicate-suppression attempt were found. The recurring schedule delay and inactive Cloudflare backup remain tracked in `OPEN_ISSUES.md`.
 
 ## Current Runtime State
 

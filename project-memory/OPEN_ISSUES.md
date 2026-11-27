@@ -1,10 +1,18 @@
 # Open Issues
 
-Last updated: 2026-11-18
+Last updated: 2026-11-27
 
 ## Operational Risks
 
-### 2026-11-14 source-consistent Arisu Run alert lacks cycling-impact evidence
+### 2026-11-27 ingest crash broke a scheduled run (see INCIDENTS.md)
+
+- Resolved same day. The 02:00 KST `Manual Batch` run failed at `Ingest raw events` and never reached Telegram publish; fix pushed as commits `d5cda06`/`014acf9`. Full root cause and fix details are in `INCIDENTS.md` under `2026-11-27`.
+- Remaining follow-up: confirm the 2026-11-28 02:00 KST scheduled run both completes `Ingest raw events` without error and delivers Telegram successfully. The user declined a manual re-dispatch for the missed 2026-11-27 message.
+
+### 2026-11-14 source-consistent Arisu Run alert lacks cycling-impact evidence (resolved 2026-11-26)
+
+- Resolved by commit `0402599` (`fix: require bicycle mention for medium impact; dedupe raw events by url`): `classify_event` now also requires a literal `자전거` mention before assigning `MEDIUM` impact, so keyword-only festival/event text like `evntSn=485`'s `한강공원 일대 음수대` no longer qualifies on its own.
+- Original report kept below for historical context.
 
 - User-received alert: `evntSn=485`, `MEDIUM`, `한강공원 일대 음수대`, 2026-10-15 through 2026-11-15, reason `행사 또는 축제 관련 표현 감지`.
 - Official Hangang detail checked on 2026-11-14: https://hangang.seoul.go.kr/www/eventMng/detail.do?evntSn=485&mid=538&srchType=list . Title, location, date range, and source ID match. The challenge allows self-paced participation across Hangang Park fountains with no fixed start time, course, or distance. November 14 falls within the participation period.
@@ -15,7 +23,7 @@ Last updated: 2026-11-18
 
 ### Remaining work snapshot, reviewed 2026-11-14
 
-1. **Alert precision:** Resolve the `485` relevance issue and the `445`/`456`/`466` operating-day and hour mistakes. Validate messages against official detailed schedules.
+1. **Alert precision:** The `485` keyword-only relevance issue is resolved (commit `0402599`, requires a literal `자전거` mention for `MEDIUM` impact). The `445`/`456`/`466` operating-day and hour mistakes remain open: validate messages against official detailed schedules.
 2. **Natural delivery and timeliness:** The 2026-11-11 Supabase records confirm source collection, Telegram publish, and a matching KST-date-scoped hash, but the batch started at 07:09 KST rather than 02:00 KST. Check GitHub Actions creation, queue, and runner timestamps. User receipt on 2026-11-14 confirms delivery only; its trigger and DB run were not checked in that review.
 3. **Scheduler backup:** Repair Cloudflare Worker edit credentials, verify its GitHub dispatch token and logs, then test and enable the prepared 02:15 KST backup only after same-day dedupe is proven in production. Historical Worker cron failed with `scriptThrewException`; the backup is inactive.
 4. **Source reliability:** Watch for Hangang timeouts from GitHub runners. Retain a visible degraded-source message when no publishable events remain after partial collection; investigate connectivity if the failure recurs.
